@@ -46,13 +46,13 @@ class FooBarMethod(BotXMethod):
         403: response_exception_thrower(FooBarError, "FooBar comment"),
     }
 
-    async def execute(
+    def execute(
         self,
         payload: BotXAPIFooBarRequestPayload,
     ) -> BotXAPIFooBarResponsePayload:
         path = "/foo/bar"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "POST",
             self._build_url(path),
             json=payload.jsonable_dict(),
@@ -64,14 +64,12 @@ class FooBarMethod(BotXMethod):
         )
 
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.usefixtures("respx_mock"),
+pytestmark = [pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__botx_method__invalid_botx_status_code_error_raised(
-    httpx_client: httpx.AsyncClient,
+def test__botx_method__invalid_botx_status_code_error_raised(
+    httpx_client: httpx.Client,
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -95,15 +93,15 @@ async def test__botx_method__invalid_botx_status_code_error_raised(
 
     # - Act -
     with pytest.raises(InvalidBotXStatusCodeError) as exc:
-        await method.execute(payload)
+        method.execute(payload)
 
     # - Assert -
     assert "failed with code 405" in str(exc.value)
     assert endpoint.called
 
 
-async def test__botx_method__invalid_json_raises_invalid_botx_response_payload_error(
-    httpx_client: httpx.AsyncClient,
+def test__botx_method__invalid_json_raises_invalid_botx_response_payload_error(
+    httpx_client: httpx.Client,
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -130,15 +128,15 @@ async def test__botx_method__invalid_json_raises_invalid_botx_response_payload_e
 
     # - Act -
     with pytest.raises(InvalidBotXResponsePayloadError) as exc:
-        await method.execute(payload)
+        method.execute(payload)
 
     # - Assert -
     assert '{"invalid": "json' in str(exc.value)
     assert endpoint.called
 
 
-async def test__botx_method__invalid_schema_raises_invalid_botx_response_payload_error(
-    httpx_client: httpx.AsyncClient,
+def test__botx_method__invalid_schema_raises_invalid_botx_response_payload_error(
+    httpx_client: httpx.Client,
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -165,15 +163,15 @@ async def test__botx_method__invalid_schema_raises_invalid_botx_response_payload
 
     # - Act -
     with pytest.raises(InvalidBotXResponsePayloadError) as exc:
-        await method.execute(payload)
+        method.execute(payload)
 
     # - Assert -
     assert '{"invalid":"schema"}' in str(exc.value)
     assert endpoint.called
 
 
-async def test__botx_method__status_handler_called(
-    httpx_client: httpx.AsyncClient,
+def test__botx_method__status_handler_called(
+    httpx_client: httpx.Client,
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -197,7 +195,7 @@ async def test__botx_method__status_handler_called(
 
     # - Act -
     with pytest.raises(FooBarError) as exc:
-        await method.execute(payload)
+        method.execute(payload)
 
     # - Assert -
     assert "403" in str(exc.value)
@@ -205,8 +203,8 @@ async def test__botx_method__status_handler_called(
     assert endpoint.called
 
 
-async def test__botx_method__succeed(
-    httpx_client: httpx.AsyncClient,
+def test__botx_method__succeed(
+    httpx_client: httpx.Client,
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -235,7 +233,7 @@ async def test__botx_method__succeed(
     payload = BotXAPIFooBarRequestPayload.from_domain(baz=1)
 
     # - Act -
-    botx_api_foo_bar = await method.execute(payload)
+    botx_api_foo_bar = method.execute(payload)
 
     # - Assert -
     assert botx_api_foo_bar.to_domain() == UUID("21a9ec9e-f21f-4406-ac44-1a78d2ccf9e3")
@@ -254,11 +252,11 @@ async def test__botx_method__succeed(
         "http://cts.ru:8000/foo/bar/",
     ),
 )
-async def test__build_botx_url_with_different_bot_cts_urls(
+def test__build_botx_url_with_different_bot_cts_urls(
     bot_id: UUID,
     cts_url: str,
     respx_mock: MockRouter,
-    httpx_client: httpx.AsyncClient,
+    httpx_client: httpx.Client,
     bot_account: BotAccountWithSecret,
 ) -> None:
     # - Arrange -
@@ -282,7 +280,7 @@ async def test__build_botx_url_with_different_bot_cts_urls(
     payload = BotXAPIFooBarRequestPayload.from_domain(baz=1)
 
     # - Act -
-    await method.execute(payload)
+    method.execute(payload)
 
     # - Assert -
     assert endpoint.called

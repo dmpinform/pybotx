@@ -10,14 +10,12 @@ from pybotx.bot.bot_accounts_storage import BotAccountsStorage
 from tests.client.test_authorized_botx_method import FooBarMethod
 from tests.client.test_botx_method import BotXAPIFooBarRequestPayload
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.usefixtures("respx_mock"),
+pytestmark = [pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__authorized_botx_method__unauthorized(
-    httpx_client: httpx.AsyncClient,
+def test__authorized_botx_method__unauthorized(
+    httpx_client: httpx.Client,
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -56,7 +54,7 @@ async def test__authorized_botx_method__unauthorized(
     # - Act -
     with pytest.warns(DeprecationWarning):
         with pytest.raises(InvalidBotAccountError) as exc:
-            await method.execute(payload)
+            method.execute(payload)
 
     # - Assert -
     assert "failed with code 401" in str(exc.value)
@@ -64,8 +62,8 @@ async def test__authorized_botx_method__unauthorized(
     assert foo_bar_endpoint.called
 
 
-async def test__authorized_botx_method__succeed(
-    httpx_client: httpx.AsyncClient,
+def test__authorized_botx_method__succeed(
+    httpx_client: httpx.Client,
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -109,7 +107,7 @@ async def test__authorized_botx_method__succeed(
 
     # - Act -
     with pytest.warns(DeprecationWarning):
-        botx_api_foo_bar = await method.execute(payload)
+        botx_api_foo_bar = method.execute(payload)
 
     # - Assert -
     assert botx_api_foo_bar.to_domain() == UUID("21a9ec9e-f21f-4406-ac44-1a78d2ccf9e3")
@@ -117,8 +115,8 @@ async def test__authorized_botx_method__succeed(
     assert foo_bar_endpoint.called
 
 
-async def test__authorized_botx_method__with_prepared_token(
-    httpx_client: httpx.AsyncClient,
+def test__authorized_botx_method__with_prepared_token(
+    httpx_client: httpx.Client,
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -149,15 +147,15 @@ async def test__authorized_botx_method__with_prepared_token(
 
     # - Act -
     with pytest.warns(DeprecationWarning):
-        botx_api_foo_bar = await method.execute(payload)
+        botx_api_foo_bar = method.execute(payload)
 
     # - Assert -
     assert botx_api_foo_bar.to_domain() == UUID("21a9ec9e-f21f-4406-ac44-1a78d2ccf9e3")
     assert endpoint.called
 
 
-async def test__authorized_botx_method__legacy_warning_suppressed(
-    httpx_client: httpx.AsyncClient,
+def test__authorized_botx_method__legacy_warning_suppressed(
+    httpx_client: httpx.Client,
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -202,7 +200,7 @@ async def test__authorized_botx_method__legacy_warning_suppressed(
     payload = BotXAPIFooBarRequestPayload.from_domain(baz=1)
 
     # - Act -
-    botx_api_foo_bar = await method.execute(payload)
+    botx_api_foo_bar = method.execute(payload)
 
     # - Assert -
     assert botx_api_foo_bar.to_domain() == UUID("21a9ec9e-f21f-4406-ac44-1a78d2ccf9e3")

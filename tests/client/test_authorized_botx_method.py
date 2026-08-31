@@ -16,13 +16,13 @@ from tests.client.test_botx_method import (
 
 
 class FooBarMethod(AuthorizedBotXMethod):
-    async def execute(
+    def execute(
         self,
         payload: BotXAPIFooBarRequestPayload,
     ) -> BotXAPIFooBarResponsePayload:
         path = "/foo/bar"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "POST",
             self._build_url(path),
             json=payload.jsonable_dict(),
@@ -34,14 +34,12 @@ class FooBarMethod(AuthorizedBotXMethod):
         )
 
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.usefixtures("respx_mock"),
+pytestmark = [pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__authorized_botx_method__v2_succeed(
-    httpx_client: httpx.AsyncClient,
+def test__authorized_botx_method__v2_succeed(
+    httpx_client: httpx.Client,
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -98,7 +96,7 @@ async def test__authorized_botx_method__v2_succeed(
     payload = BotXAPIFooBarRequestPayload.from_domain(baz=1)
 
     # - Act -
-    botx_api_foo_bar = await method.execute(payload)
+    botx_api_foo_bar = method.execute(payload)
 
     # - Assert -
     assert botx_api_foo_bar.to_domain() == UUID("21a9ec9e-f21f-4406-ac44-1a78d2ccf9e3")

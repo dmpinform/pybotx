@@ -1,31 +1,30 @@
 from http import HTTPStatus
+from tempfile import NamedTemporaryFile
+from typing import IO
 from uuid import UUID
 
 import httpx
 import pytest
-from aiofiles.tempfile import NamedTemporaryFile
 from respx.router import MockRouter
 
 from pybotx import Bot, BotAccountWithSecret, HandlerCollector, lifespan_wrapper
 from pybotx.client.exceptions.files import FileTypeNotAllowed
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__upload_static_file__wrong_file_type(
+def test__upload_static_file__wrong_file_type(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
     bot_account: BotAccountWithSecret,
-    async_buffer: NamedTemporaryFile,
+    buffer: IO[bytes],
 ) -> None:
     # - Arrange -
-    await async_buffer.write(b"Hello, world!\n")
-    await async_buffer.seek(0)
+    buffer.write(b"Hello, world!\n")
+    buffer.seek(0)
 
     endpoint = respx_mock.post(
         f"https://{host}/api/v3/botx/smartapps/upload_file",
@@ -50,11 +49,11 @@ async def test__upload_static_file__wrong_file_type(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
+    with lifespan_wrapper(built_bot) as bot:
         with pytest.raises(FileTypeNotAllowed) as exc:
-            await bot.upload_static_file(
+            bot.upload_static_file(
                 bot_id=bot_id,
-                async_buffer=async_buffer,
+                buffer=buffer,
                 filename="test.txt",
             )
 
@@ -63,16 +62,16 @@ async def test__upload_static_file__wrong_file_type(
     assert "txt" in str(exc.value)
 
 
-async def test__upload_static_file__succeed(
+def test__upload_static_file__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
     bot_account: BotAccountWithSecret,
-    async_buffer: NamedTemporaryFile,
+    buffer: IO[bytes],
 ) -> None:
     # - Arrange -
-    await async_buffer.write(b"Hello, world!\n")
-    await async_buffer.seek(0)
+    buffer.write(b"Hello, world!\n")
+    buffer.seek(0)
 
     endpoint = respx_mock.post(
         f"https://{host}/api/v3/botx/smartapps/upload_file",
@@ -94,10 +93,10 @@ async def test__upload_static_file__succeed(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        smartapp_file_link = await bot.upload_static_file(
+    with lifespan_wrapper(built_bot) as bot:
+        smartapp_file_link = bot.upload_static_file(
             bot_id=bot_id,
-            async_buffer=async_buffer,
+            buffer=buffer,
             filename="test.png",
         )
 

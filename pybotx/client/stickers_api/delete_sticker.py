@@ -12,7 +12,7 @@ class BotXAPIDeleteStickerRequestPayload(UnverifiedPayloadBaseModel):
     sticker_id: UUID
 
     @classmethod
-    async def from_domain(
+    def from_domain(
         cls,
         sticker_pack_id: UUID,
         sticker_id: UUID,
@@ -30,7 +30,7 @@ class DeleteStickerMethod(AuthorizedBotXMethod):
         404: response_exception_thrower(StickerPackOrStickerNotFoundError),
     }
 
-    async def execute(
+    def execute(
         self,
         payload: BotXAPIDeleteStickerRequestPayload,
     ) -> None:
@@ -39,7 +39,7 @@ class DeleteStickerMethod(AuthorizedBotXMethod):
             f"/stickers/{payload.sticker_id}"
         )
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "DELETE",
             self._build_url(path),
         )

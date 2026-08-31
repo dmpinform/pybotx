@@ -1,16 +1,16 @@
-from hypothesis import given, strategies as st
-
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 
 from pybotx.models.enums import (
     APIAttachmentTypes,
     APIChatTypes,
-    APIUserKinds,
     APISyncSourceTypes,
+    APIUserKinds,
     AttachmentTypes,
     BotAPIClientPlatforms,
-    BotAPIMentionTypes,
     BotAPIConferenceLinkTypes,
+    BotAPIMentionTypes,
     ChatTypes,
     ClientPlatforms,
     ConferenceLinkTypes,

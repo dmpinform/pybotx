@@ -13,14 +13,12 @@ from pybotx import (
     lifespan_wrapper,
 )
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__delete_message__succeed(
+def test__delete_message__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -46,8 +44,8 @@ async def test__delete_message__succeed(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        await bot.delete_message(
+    with lifespan_wrapper(built_bot) as bot:
+        bot.delete_message(
             bot_id=bot_id,
             sync_id=UUID("8ba66c5b-40bf-5c77-911d-519cb4e382e9"),
         )
@@ -56,7 +54,7 @@ async def test__delete_message__succeed(
     assert endpoint.called
 
 
-async def test__delete_message__message_not_found_error_raised(
+def test__delete_message__message_not_found_error_raised(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -84,9 +82,9 @@ async def test__delete_message__message_not_found_error_raised(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
+    with lifespan_wrapper(built_bot) as bot:
         with pytest.raises(MessageNotFoundError) as exc:
-            await bot.delete_message(
+            bot.delete_message(
                 bot_id=bot_id,
                 sync_id=UUID("fe1f285c-073e-4231-b190-2959f28168cc"),
             )

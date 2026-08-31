@@ -1,6 +1,6 @@
+from collections.abc import Callable
 from http import HTTPStatus
 from typing import Any
-from collections.abc import Callable
 from uuid import UUID
 
 import httpx
@@ -21,14 +21,12 @@ from pybotx import (
 )
 from pybotx.models.system_events.smartapp_event import SmartAppEvent
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__async_file__open(
+def test__async_file__open(
     respx_mock: MockRouter,
     host: str,
     bot_account: BotAccountWithSecret,
@@ -117,18 +115,18 @@ async def test__async_file__open(
     read_content: bytes | None = None
 
     @collector.smartapp_event
-    async def smartapp_event_handler(event: SmartAppEvent, bot: Bot) -> None:
+    def smartapp_event_handler(event: SmartAppEvent, bot: Bot) -> None:
         nonlocal read_content
 
         assert event.files
-        async with event.files[0].open() as fo:
-            read_content = await fo.read()
+        with event.files[0].open() as fo:
+            read_content = fo.read()
 
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_raw_bot_command(payload, verify_request=False)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_raw_bot_command(payload, verify_request=False)
 
     # - Assert -
     assert read_content == b"Hello, world!\n"
@@ -271,7 +269,7 @@ API_AND_DOMAIN_FILES = (
     "api_async_file,domain_async_file",
     API_AND_DOMAIN_FILES,
 )
-async def test__async_execute_raw_bot_command__different_file_types(
+def test__execute_raw_bot_command__different_file_types(
     api_async_file: dict[str, Any],
     domain_async_file: File,
     api_incoming_message_factory: Callable[..., dict[str, Any]],
@@ -329,7 +327,7 @@ async def test__async_execute_raw_bot_command__different_file_types(
     smartapp_event: SmartAppEvent | None = None
 
     @collector.smartapp_event
-    async def smartapp_event_handler(event: SmartAppEvent, bot: Bot) -> None:
+    def smartapp_event_handler(event: SmartAppEvent, bot: Bot) -> None:
         nonlocal smartapp_event
         smartapp_event = event
         # Drop `raw_command` from asserting
@@ -338,15 +336,15 @@ async def test__async_execute_raw_bot_command__different_file_types(
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_raw_bot_command(payload, verify_request=False)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_raw_bot_command(payload, verify_request=False)
 
     # - Assert -
     assert smartapp_event
     assert smartapp_event.files == [domain_async_file]
 
 
-async def test__async_file_properties_expose_private_fields() -> None:
+def test__async_file_properties_expose_private_fields() -> None:
     image = Image(
         type=AttachmentTypes.IMAGE,
         filename="pass.png",

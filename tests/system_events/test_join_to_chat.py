@@ -15,14 +15,12 @@ from pybotx import (
 from pybotx.models.system_events.user_joined_to_chat import JoinToChatEvent
 from tests.system_events.factories import BotAPIJoinToChatFactory
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__join_to_chat__succeed(
+def test__join_to_chat__succeed(
     bot_account: BotAccountWithSecret,
 ) -> None:
     """Verifies  user joining chat message processing.
@@ -42,7 +40,7 @@ async def test__join_to_chat__succeed(
     join_to_chat: JoinToChatEvent | None = None
 
     @collector.user_joined_to_chat
-    async def join_to_chat_handler(event: JoinToChatEvent, bot: Bot) -> None:
+    def join_to_chat_handler(event: JoinToChatEvent, bot: Bot) -> None:
         nonlocal join_to_chat
         join_to_chat = event
         # Drop `raw_command` from asserting
@@ -51,8 +49,8 @@ async def test__join_to_chat__succeed(
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_raw_bot_command(payload, verify_request=False)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_raw_bot_command(payload, verify_request=False)
 
     # - Assert -
     expected_event = JoinToChatEvent(

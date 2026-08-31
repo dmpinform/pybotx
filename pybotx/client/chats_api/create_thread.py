@@ -51,13 +51,13 @@ class CreateThreadMethod(AuthorizedBotXMethod):
         409: conflict_error_handler,
     }
 
-    async def execute(
+    def execute(
         self,
         payload: BotXAPICreateThreadRequestPayload,
     ) -> BotXAPICreateThreadResponsePayload:
         path = "/api/v3/botx/chats/create_thread"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "POST",
             self._build_url(path),
             json=payload.jsonable_dict(),

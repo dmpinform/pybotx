@@ -1,4 +1,3 @@
-import asyncio
 from collections.abc import Callable
 from unittest.mock import MagicMock, call
 
@@ -12,27 +11,25 @@ from pybotx import (
     lifespan_wrapper,
 )
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__exception_middleware__handler_called(
+def test__exception_middleware__handler_called(
     incoming_message_factory: Callable[..., IncomingMessage],
     bot_account: BotAccountWithSecret,
 ) -> None:
     # - Arrange -
     exc = ValueError("test_error")
-    value_error_handler = MagicMock(asyncio.Future())
+    value_error_handler = MagicMock()
 
     user_command = incoming_message_factory(body="/command")
 
     collector = HandlerCollector()
 
     @collector.command("/command", description="My command")
-    async def handler(message: IncomingMessage, bot: Bot) -> None:
+    def handler(message: IncomingMessage, bot: Bot) -> None:
         raise exc
 
     built_bot = Bot(
@@ -42,15 +39,15 @@ async def test__exception_middleware__handler_called(
     )
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_bot_command(user_command)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_bot_command(user_command).join()
 
     # - Assert -
-    assert len(value_error_handler.mock_calls) == 1
-    assert value_error_handler.mock_calls[0] == call(user_command, built_bot, exc)
+    assert value_error_handler.call_count == 1
+    assert value_error_handler.call_args == call(user_command, built_bot, exc)
 
 
-async def test__exception_middleware__without_handler_logs(
+def test__exception_middleware__without_handler_logs(
     incoming_message_factory: Callable[..., IncomingMessage],
     loguru_caplog: pytest.LogCaptureFixture,
     bot_account: BotAccountWithSecret,
@@ -61,21 +58,20 @@ async def test__exception_middleware__without_handler_logs(
     collector = HandlerCollector()
 
     @collector.command("/command", description="My command")
-    async def handler(message: IncomingMessage, bot: Bot) -> None:
+    def handler(message: IncomingMessage, bot: Bot) -> None:
         raise ValueError("Testing exception middleware")
 
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        with pytest.raises(ValueError) as exc:
-            await bot.async_execute_bot_command(user_command)
+    built_bot.execute_bot_command(user_command)
+    built_bot.shutdown()
 
     # - Assert -
-    assert "Testing exception middleware" in str(exc.value)
+    assert "Testing exception middleware" in loguru_caplog.text
 
 
-async def test__exception_middleware__error_in_handler_logs(
+def test__exception_middleware__error_in_handler_logs(
     incoming_message_factory: Callable[..., IncomingMessage],
     loguru_caplog: pytest.LogCaptureFixture,
     bot_account: BotAccountWithSecret,
@@ -83,7 +79,7 @@ async def test__exception_middleware__error_in_handler_logs(
     # - Arrange -
     user_command = incoming_message_factory(body="/command")
 
-    async def exception_handler(
+    def exception_handler(
         message: IncomingMessage,
         bot: Bot,
         exc: Exception,
@@ -93,7 +89,7 @@ async def test__exception_middleware__error_in_handler_logs(
     collector = HandlerCollector()
 
     @collector.command("/command", description="My command")
-    async def handler(message: IncomingMessage, bot: Bot) -> None:
+    def handler(message: IncomingMessage, bot: Bot) -> None:
         raise ValueError("Testing exception middleware")
 
     built_bot = Bot(
@@ -103,8 +99,8 @@ async def test__exception_middleware__error_in_handler_logs(
     )
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_bot_command(user_command)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_bot_command(user_command).join()
 
     # - Assert -
     assert "Uncaught exception ValueError in exception handler" in loguru_caplog.text

@@ -51,13 +51,13 @@ class BotXAPIBotsListResponsePayload(VerifiedPayloadBaseModel):
 
 
 class BotsListMethod(AuthorizedBotXMethod):
-    async def execute(
+    def execute(
         self,
         payload: BotXAPIBotsListRequestPayload,
     ) -> BotXAPIBotsListResponsePayload:
         path = "/api/v1/botx/bots/catalog"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "GET",
             self._build_url(path),
             params=payload.jsonable_dict(),

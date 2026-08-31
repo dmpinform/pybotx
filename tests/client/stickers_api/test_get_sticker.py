@@ -14,14 +14,12 @@ from pybotx import (
 )
 from pybotx.models.stickers import Sticker
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__get_sticker__sticker_pack_or_sticker_not_found_error_raised(
+def test__get_sticker__sticker_pack_or_sticker_not_found_error_raised(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -50,9 +48,9 @@ async def test__get_sticker__sticker_pack_or_sticker_not_found_error_raised(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
+    with lifespan_wrapper(built_bot) as bot:
         with pytest.raises(StickerPackOrStickerNotFoundError) as exc:
-            await bot.get_sticker(
+            bot.get_sticker(
                 bot_id=bot_id,
                 sticker_pack_id=UUID("26080153-a57d-5a8c-af0e-fdecee3c4435"),
                 sticker_id=UUID("75bb24c9-7c08-5db0-ae3e-085929e80c54"),
@@ -63,7 +61,7 @@ async def test__get_sticker__sticker_pack_or_sticker_not_found_error_raised(
     assert endpoint.called
 
 
-async def test__get_sticker__succeed(
+def test__get_sticker__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -92,8 +90,8 @@ async def test__get_sticker__succeed(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        sticker = await bot.get_sticker(
+    with lifespan_wrapper(built_bot) as bot:
+        sticker = bot.get_sticker(
             bot_id=bot_id,
             sticker_pack_id=UUID("26080153-a57d-5a8c-af0e-fdecee3c4435"),
             sticker_id=UUID("75bb24c9-7c08-5db0-ae3e-085929e80c54"),

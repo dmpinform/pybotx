@@ -26,13 +26,13 @@ class BotXAPIFooBarResponsePayload(VerifiedPayloadBaseModel):
 
 
 class FooBarMethod(BotXMethod):
-    async def execute(
+    def execute(
         self,
         payload: BotXAPIFooBarRequestPayload,
     ) -> None:
         path = "/foo/bar"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "POST",
             self._build_url(path),
             json=payload.jsonable_dict(),
@@ -44,14 +44,12 @@ class FooBarMethod(BotXMethod):
         )
 
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.usefixtures("respx_mock"),
+pytestmark = [pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__botx_method__undefined_cleaned(
-    httpx_client: httpx.AsyncClient,
+def test__botx_method__undefined_cleaned(
+    httpx_client: httpx.Client,
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -107,7 +105,7 @@ async def test__botx_method__undefined_cleaned(
     )
 
     # - Act -
-    await method.execute(payload)
+    method.execute(payload)
 
     # - Assert -
     assert endpoint.called

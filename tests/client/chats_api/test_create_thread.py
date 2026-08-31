@@ -13,9 +13,7 @@ from pybotx import (
 )
 from tests.testkit import BotXRequest, mock_botx, ok_payload
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
@@ -27,7 +25,7 @@ def sync_id() -> str:
     return "21a9ec9e-f21f-4406-ac44-1a78d2ccf9e3"
 
 
-async def test__create_thread__succeed(
+def test__create_thread__succeed(
     respx_mock: MockRouter,
     host: str,
     sync_id: str,
@@ -45,8 +43,8 @@ async def test__create_thread__succeed(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        created_thread_id = await bot.create_thread(
+    with bot_factory() as bot:
+        created_thread_id = bot.create_thread(
             bot_id=bot_id,
             sync_id=UUID(sync_id),
         )
@@ -199,7 +197,7 @@ async def test__create_thread__succeed(
         ),
     ),
 )
-async def test__create_thread__botx_error_raised(
+def test__create_thread__botx_error_raised(
     respx_mock: MockRouter,
     host: str,
     sync_id: str,
@@ -214,12 +212,11 @@ async def test__create_thread__botx_error_raised(
     endpoint = mock_botx(respx_mock, host, request, return_json, response_status)
 
     # - Act -
-    async with bot_factory() as bot:
-        with pytest.raises(expected_exc_type) as exc:
-            await bot.create_thread(
-                bot_id=bot_id,
-                sync_id=UUID(sync_id),
-            )
+    with bot_factory() as bot, pytest.raises(expected_exc_type) as exc:
+        bot.create_thread(
+            bot_id=bot_id,
+            sync_id=UUID(sync_id),
+        )
 
     # - Assert -
     assert endpoint.called

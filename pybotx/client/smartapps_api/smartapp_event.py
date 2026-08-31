@@ -5,7 +5,7 @@ from pybotx.client.authorized_botx_method import AuthorizedBotXMethod
 from pybotx.constants import SMARTAPP_API_VERSION
 from pybotx.missing import Missing, MissingOptional, Undefined
 from pybotx.models.api_base import UnverifiedPayloadBaseModel, VerifiedPayloadBaseModel
-from pybotx.models.async_files import APIAsyncFile, File, convert_async_file_from_domain
+from pybotx.models.files import APIAsyncFile, File, convert_async_file_from_domain
 
 
 class BotXAPISmartAppEventRequestPayload(UnverifiedPayloadBaseModel):
@@ -50,7 +50,7 @@ class BotXAPISmartAppEventResponsePayload(VerifiedPayloadBaseModel):
 
 
 class SmartAppEventMethod(AuthorizedBotXMethod):
-    async def execute(
+    def execute(
         self,
         payload: BotXAPISmartAppEventRequestPayload,
     ) -> None:
@@ -61,7 +61,7 @@ class SmartAppEventMethod(AuthorizedBotXMethod):
         json = payload.jsonable_dict()
         json["opts"] = json.get("opts", {})
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "POST",
             self._build_url(path),
             json=json,

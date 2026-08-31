@@ -1,5 +1,5 @@
-from typing import Any
 from collections.abc import Callable
+from typing import Any
 from uuid import UUID
 
 import pytest
@@ -14,14 +14,12 @@ from pybotx import (
 )
 from pybotx.models.system_events.conference_deleted import ConferenceDeletedEvent
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__conference_deleted_succeed(
+def test__conference_deleted_succeed(
     bot_account: BotAccountWithSecret,
     bot_id: UUID,
     host: str,
@@ -41,7 +39,7 @@ async def test__conference_deleted_succeed(
     conference_deleted: ConferenceDeletedEvent | None = None
 
     @collector.conference_deleted
-    async def conference_deleted_handler(
+    def conference_deleted_handler(
         event: ConferenceDeletedEvent,
         bot: Bot,
     ) -> None:
@@ -51,8 +49,8 @@ async def test__conference_deleted_succeed(
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_raw_bot_command(payload, verify_request=False)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_raw_bot_command(payload, verify_request=False)
 
     # - Assert -
     diff = DeepDiff(

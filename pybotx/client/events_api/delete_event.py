@@ -29,13 +29,13 @@ class DeleteEventMethod(AuthorizedBotXMethod):
         404: response_exception_thrower(MessageNotFoundError),
     }
 
-    async def execute(
+    def execute(
         self,
         payload: BotXAPIDeleteEventRequestPayload,
     ) -> BotXAPIDeleteEventResponsePayload:
         path = "/api/v3/botx/events/delete_event"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "POST",
             self._build_url(path),
             json=payload.jsonable_dict(),

@@ -9,9 +9,9 @@ from pybotx.client.bots_api.get_token import (
 )
 
 
-async def get_token(
+def get_token(
     bot_id: UUID,
-    httpx_client: httpx.AsyncClient,
+    httpx_client: httpx.Client,
     bot_accounts_storage: BotAccountsStorage,
 ) -> str:
     """Request token for bot.
@@ -28,6 +28,6 @@ async def get_token(
     signature = bot_accounts_storage.build_signature(bot_id)
     payload = BotXAPIGetTokenRequestPayload.from_domain(signature)
 
-    botx_api_token = await method.execute(payload)
+    botx_api_token = method.execute(payload)
 
     return botx_api_token.to_domain()

@@ -9,14 +9,12 @@ from pybotx import Bot, HandlerCollector, lifespan_wrapper
 from pybotx.models.bot_account import BotAccountWithSecret
 from pybotx.models.smartapps import SmartApp
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__smartapps_list__succeed(
+def test__smartapps_list__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -51,8 +49,8 @@ async def test__smartapps_list__succeed(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        smartapps_list, version = await bot.get_smartapps_list(
+    with lifespan_wrapper(built_bot) as bot:
+        smartapps_list, version = bot.get_smartapps_list(
             bot_id=bot_id,
         )
 

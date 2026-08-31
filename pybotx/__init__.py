@@ -1,3 +1,4 @@
+from pybotx.auth import BotXAuthVersion
 from pybotx.bot.api.exceptions import (
     UnknownSystemEventError,
     UnsupportedBotAPIVersionError,
@@ -13,7 +14,6 @@ from pybotx.bot.api.responses.unverified_request import (
     BotAPIUnverifiedRequestResponse,
     build_unverified_request_response,
 )
-from pybotx.auth import BotXAuthVersion
 from pybotx.bot.bot import Bot
 from pybotx.bot.callbacks.callback_repo_proto import CallbackRepoProto
 from pybotx.bot.exceptions import (
@@ -83,7 +83,6 @@ from pybotx.client.stickers_api.exceptions import (
     StickerPackOrStickerNotFoundError,
 )
 from pybotx.logger import logger
-from pybotx.models.async_files import Document, File, Image, Video, Voice
 from pybotx.models.attachments import (
     AttachmentDocument,
     AttachmentImage,
@@ -113,6 +112,7 @@ from pybotx.models.enums import (
     SyncSourceTypes,
     UserKinds,
 )
+from pybotx.models.files import Document, File, Image, Video, Voice
 from pybotx.models.message.edit_message import EditMessage
 from pybotx.models.message.forward import Forward
 from pybotx.models.message.incoming_message import (

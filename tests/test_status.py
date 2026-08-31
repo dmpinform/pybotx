@@ -15,9 +15,7 @@ from pybotx import (
     lifespan_wrapper,
 )
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
@@ -34,7 +32,7 @@ def status_recipient(bot_id: UUID) -> StatusRecipient:
     )
 
 
-async def test__get_status__hidden_command_not_in_menu(
+def test__get_status__hidden_command_not_in_menu(
     bot_account: BotAccountWithSecret,
     status_recipient: StatusRecipient,
     incorrect_handler_trigger: Mock,
@@ -43,14 +41,14 @@ async def test__get_status__hidden_command_not_in_menu(
     collector = HandlerCollector()
 
     @collector.command("/_command", visible=False)
-    async def handler(message: IncomingMessage, bot: Bot) -> None:
+    def handler(message: IncomingMessage, bot: Bot) -> None:
         incorrect_handler_trigger()
 
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        status = await bot.get_status(status_recipient)
+    with lifespan_wrapper(built_bot) as bot:
+        status = bot.get_status(status_recipient)
 
     # - Assert -
     assert status == BotMenu({})
@@ -58,7 +56,7 @@ async def test__get_status__hidden_command_not_in_menu(
     incorrect_handler_trigger.assert_not_called()
 
 
-async def test__get_status__visible_command_in_menu(
+def test__get_status__visible_command_in_menu(
     bot_account: BotAccountWithSecret,
     status_recipient: StatusRecipient,
     incorrect_handler_trigger: Mock,
@@ -67,14 +65,14 @@ async def test__get_status__visible_command_in_menu(
     collector = HandlerCollector()
 
     @collector.command("/command", description="My command")
-    async def handler(message: IncomingMessage, bot: Bot) -> None:
+    def handler(message: IncomingMessage, bot: Bot) -> None:
         incorrect_handler_trigger()
 
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        status = await bot.get_status(status_recipient)
+    with lifespan_wrapper(built_bot) as bot:
+        status = bot.get_status(status_recipient)
 
     # - Assert -
     assert status == BotMenu({"/command": "My command"})
@@ -82,7 +80,7 @@ async def test__get_status__visible_command_in_menu(
     incorrect_handler_trigger.assert_not_called()
 
 
-async def test__get_status__command_not_in_menu_if_visible_func_return_false(
+def test__get_status__command_not_in_menu_if_visible_func_return_false(
     bot_account: BotAccountWithSecret,
     status_recipient: StatusRecipient,
     incorrect_handler_trigger: Mock,
@@ -90,18 +88,18 @@ async def test__get_status__command_not_in_menu_if_visible_func_return_false(
     # - Arrange -
     collector = HandlerCollector()
 
-    async def visible_func(status_recipient: StatusRecipient, bot: Bot) -> bool:
+    def visible_func(status_recipient: StatusRecipient, bot: Bot) -> bool:
         return False
 
     @collector.command("/command", visible=visible_func, description="My command")
-    async def handler(message: IncomingMessage, bot: Bot) -> None:
+    def handler(message: IncomingMessage, bot: Bot) -> None:
         incorrect_handler_trigger()
 
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        status = await bot.get_status(status_recipient)
+    with lifespan_wrapper(built_bot) as bot:
+        status = bot.get_status(status_recipient)
 
     # - Assert -
     assert status == BotMenu({})
@@ -109,7 +107,7 @@ async def test__get_status__command_not_in_menu_if_visible_func_return_false(
     incorrect_handler_trigger.assert_not_called()
 
 
-async def test__get_status__command_in_menu_if_visible_func_return_true(
+def test__get_status__command_in_menu_if_visible_func_return_true(
     bot_account: BotAccountWithSecret,
     status_recipient: StatusRecipient,
     incorrect_handler_trigger: Mock,
@@ -117,18 +115,18 @@ async def test__get_status__command_in_menu_if_visible_func_return_true(
     # - Arrange -
     collector = HandlerCollector()
 
-    async def visible_func(status_recipient: StatusRecipient, bot: Bot) -> bool:
+    def visible_func(status_recipient: StatusRecipient, bot: Bot) -> bool:
         return True
 
     @collector.command("/command", visible=visible_func, description="My command")
-    async def handler(message: IncomingMessage, bot: Bot) -> None:
+    def handler(message: IncomingMessage, bot: Bot) -> None:
         incorrect_handler_trigger()
 
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        status = await bot.get_status(status_recipient)
+    with lifespan_wrapper(built_bot) as bot:
+        status = bot.get_status(status_recipient)
 
     # - Assert -
     assert status == BotMenu({"/command": "My command"})
@@ -136,28 +134,27 @@ async def test__get_status__command_in_menu_if_visible_func_return_true(
     incorrect_handler_trigger.assert_not_called()
 
 
-async def test__raw_get_status__invalid_query() -> None:
+def test__raw_get_status__invalid_query() -> None:
     # - Arrange -
     query = {"user_huid": "f16cdc5f-6366-5552-9ecd-c36290ab3d11"}
 
     collector = HandlerCollector()
 
     @collector.command("/_command", visible=False)
-    async def handler(message: IncomingMessage, bot: Bot) -> None:
+    def handler(message: IncomingMessage, bot: Bot) -> None:
         pass
 
     built_bot = Bot(collectors=[collector], bot_accounts=[])
 
     # - Act -
-    with pytest.raises(ValueError) as exc:
-        async with lifespan_wrapper(built_bot) as bot:
-            await bot.raw_get_status(query, verify_request=False)
+    with pytest.raises(ValueError) as exc, lifespan_wrapper(built_bot) as bot:
+        bot.raw_get_status(query, verify_request=False)
 
     # - Assert -
     assert "validation error" in str(exc.value)
 
 
-async def test__raw_get_status__unknown_bot_account_error_raised() -> None:
+def test__raw_get_status__unknown_bot_account_error_raised() -> None:
     # - Arrange -
     query = {
         "bot_id": "123e4567-e89b-12d3-a456-426655440000",
@@ -168,15 +165,15 @@ async def test__raw_get_status__unknown_bot_account_error_raised() -> None:
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
+    with lifespan_wrapper(built_bot) as bot:
         with pytest.raises(UnknownBotAccountError) as exc:
-            await bot.raw_get_status(query, verify_request=False)
+            bot.raw_get_status(query, verify_request=False)
 
     # - Assert -
     assert "123e4567-e89b-12d3-a456-426655440000" in str(exc.value)
 
 
-async def test__raw_get_status__minimally_filled_succeed(
+def test__raw_get_status__minimally_filled_succeed(
     bot_account: BotAccountWithSecret,
     bot_id: UUID,
 ) -> None:
@@ -190,14 +187,14 @@ async def test__raw_get_status__minimally_filled_succeed(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        status = await bot.raw_get_status(query, verify_request=False)
+    with lifespan_wrapper(built_bot) as bot:
+        status = bot.raw_get_status(query, verify_request=False)
 
     # - Assert -
     assert status
 
 
-async def test__raw_get_status__minimum_filled_succeed(
+def test__raw_get_status__minimum_filled_succeed(
     bot_account: BotAccountWithSecret,
     bot_id: UUID,
 ) -> None:
@@ -214,14 +211,14 @@ async def test__raw_get_status__minimum_filled_succeed(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        status = await bot.raw_get_status(query, verify_request=False)
+    with lifespan_wrapper(built_bot) as bot:
+        status = bot.raw_get_status(query, verify_request=False)
 
     # - Assert -
     assert status
 
 
-async def test__raw_get_status__maximum_filled_succeed(
+def test__raw_get_status__maximum_filled_succeed(
     bot_account: BotAccountWithSecret,
     bot_id: UUID,
 ) -> None:
@@ -238,14 +235,14 @@ async def test__raw_get_status__maximum_filled_succeed(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        status = await bot.raw_get_status(query, verify_request=False)
+    with lifespan_wrapper(built_bot) as bot:
+        status = bot.raw_get_status(query, verify_request=False)
 
     # - Assert -
     assert status
 
 
-async def test__raw_get_status__hidden_command_not_in_status(
+def test__raw_get_status__hidden_command_not_in_status(
     bot_account: BotAccountWithSecret,
     bot_id: UUID,
 ) -> None:
@@ -259,14 +256,14 @@ async def test__raw_get_status__hidden_command_not_in_status(
     collector = HandlerCollector()
 
     @collector.command("/_command", visible=False)
-    async def handler(message: IncomingMessage, bot: Bot) -> None:
+    def handler(message: IncomingMessage, bot: Bot) -> None:
         pass
 
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        status = await bot.raw_get_status(query, verify_request=False)
+    with lifespan_wrapper(built_bot) as bot:
+        status = bot.raw_get_status(query, verify_request=False)
 
     # - Assert -
     assert status == {
@@ -279,7 +276,7 @@ async def test__raw_get_status__hidden_command_not_in_status(
     }
 
 
-async def test__raw_get_status__visible_command_in_status(
+def test__raw_get_status__visible_command_in_status(
     bot_account: BotAccountWithSecret,
     bot_id: UUID,
 ) -> None:
@@ -293,14 +290,14 @@ async def test__raw_get_status__visible_command_in_status(
     collector = HandlerCollector()
 
     @collector.command("/command", visible=True, description="My command")
-    async def handler(message: IncomingMessage, bot: Bot) -> None:
+    def handler(message: IncomingMessage, bot: Bot) -> None:
         pass
 
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        status = await bot.raw_get_status(query, verify_request=False)
+    with lifespan_wrapper(built_bot) as bot:
+        status = bot.raw_get_status(query, verify_request=False)
 
     # - Assert -
     assert status == {
@@ -319,7 +316,7 @@ async def test__raw_get_status__visible_command_in_status(
     }
 
 
-async def test__get_status__unsupported_chat_type_accepted(
+def test__get_status__unsupported_chat_type_accepted(
     bot_account: BotAccountWithSecret,
     bot_id: UUID,
 ) -> None:
@@ -336,8 +333,8 @@ async def test__get_status__unsupported_chat_type_accepted(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        status = await bot.raw_get_status(query, verify_request=False)
+    with lifespan_wrapper(built_bot) as bot:
+        status = bot.raw_get_status(query, verify_request=False)
 
     # - Assert -
     assert status

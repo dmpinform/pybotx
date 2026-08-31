@@ -3,7 +3,7 @@ from uuid import UUID
 
 import httpx
 
-from pybotx.async_buffer import AsyncBufferReadable
+from pybotx.buffer import BufferReadable
 from pybotx.client.authorized_botx_method import AuthorizedBotXMethod
 from pybotx.client.exceptions.http import InvalidBotXStatusCodeError
 from pybotx.client.stickers_api.exceptions import (
@@ -22,15 +22,15 @@ class BotXAPIAddStickerRequestPayload(UnverifiedPayloadBaseModel):
     image: str
 
     @classmethod
-    async def from_domain(
+    def from_domain(
         cls,
         sticker_pack_id: UUID,
         emoji: str,
-        async_buffer: AsyncBufferReadable,
+        buffer: BufferReadable,
     ) -> "BotXAPIAddStickerRequestPayload":
         mimetype = "image/png"
 
-        content = await async_buffer.read()
+        content = buffer.read()
         b64_content = encode_rfc2397(content, mimetype)
 
         return cls(sticker_pack_id=sticker_pack_id, emoji=emoji, image=b64_content)
@@ -77,7 +77,7 @@ class AddStickerMethod(AuthorizedBotXMethod):
         400: bad_request_error_handler,
     }
 
-    async def execute(
+    def execute(
         self,
         payload: BotXAPIAddStickerRequestPayload,
     ) -> BotXAPIAddStickerResponsePayload:
@@ -86,7 +86,7 @@ class AddStickerMethod(AuthorizedBotXMethod):
 
         path = f"/api/v3/botx/stickers/packs/{sticker_pack_id}/stickers"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "POST",
             self._build_url(path),
             json=jsonable_dict,

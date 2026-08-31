@@ -1,5 +1,5 @@
+from collections.abc import Callable
 from typing import TYPE_CHECKING
-from collections.abc import Awaitable, Callable
 
 from pybotx.bot.handler import IncomingMessageHandlerFunc
 from pybotx.logger import logger
@@ -10,7 +10,7 @@ if TYPE_CHECKING:  # To avoid circular import
 
 ExceptionHandler = Callable[
     [IncomingMessage, "Bot", Exception],
-    Awaitable[None],
+    None,
 ]
 ExceptionHandlersDict = dict[type[Exception], ExceptionHandler]
 
@@ -21,21 +21,21 @@ class ExceptionMiddleware:
     def __init__(self, exception_handlers: ExceptionHandlersDict) -> None:
         self._exception_handlers = exception_handlers
 
-    async def dispatch(
+    def dispatch(
         self,
         message: IncomingMessage,
         bot: "Bot",
         call_next: IncomingMessageHandlerFunc,
     ) -> None:
         try:
-            await call_next(message, bot)
+            call_next(message, bot)
         except Exception as message_handler_exc:
             exception_handler = self._get_exception_handler(message_handler_exc)
             if exception_handler is None:
                 raise message_handler_exc
 
             try:
-                await exception_handler(message, bot, message_handler_exc)
+                exception_handler(message, bot, message_handler_exc)
             except Exception as error_handler_exc:
                 exc_name = type(message_handler_exc).__name__
                 logger.exception(

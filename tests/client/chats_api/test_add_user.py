@@ -1,6 +1,6 @@
+from collections.abc import Sequence
 from http import HTTPStatus
 from typing import Any
-from collections.abc import Sequence
 from uuid import UUID
 
 import pytest
@@ -9,9 +9,7 @@ from respx.router import MockRouter
 from pybotx import ChatNotFoundError, PermissionDeniedError
 from tests.testkit import BotXRequest, error_payload, mock_botx, ok_payload
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
@@ -57,7 +55,7 @@ REQUEST = BotXRequest(
         ),
     ],
 )
-async def test__add_users_to_chat__error_response(
+def test__add_users_to_chat__error_response(
     response_status: int,
     response_json: dict[str, Any],
     expected_exc: type[Exception],
@@ -71,13 +69,12 @@ async def test__add_users_to_chat__error_response(
     endpoint = mock_botx(respx_mock, host, REQUEST, response_json, response_status)
 
     # - Act -
-    async with bot_factory() as bot:
-        with pytest.raises(expected_exc) as exc:
-            await bot.add_users_to_chat(
-                bot_id=bot_id,
-                chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
-                huids=[UUID("f837dff4-d3ad-4b8d-a0a3-5c6ca9c747d1")],
-            )
+    with bot_factory() as bot, pytest.raises(expected_exc) as exc:
+        bot.add_users_to_chat(
+            bot_id=bot_id,
+            chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
+            huids=[UUID("f837dff4-d3ad-4b8d-a0a3-5c6ca9c747d1")],
+        )
 
     # - Assert -
     for fragment in expected_fragments:
@@ -85,7 +82,7 @@ async def test__add_users_to_chat__error_response(
     assert endpoint.called
 
 
-async def test__add_users_to_chat__succeed(
+def test__add_users_to_chat__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -101,8 +98,8 @@ async def test__add_users_to_chat__succeed(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        await bot.add_users_to_chat(
+    with bot_factory() as bot:
+        bot.add_users_to_chat(
             bot_id=bot_id,
             chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
             huids=[UUID("f837dff4-d3ad-4b8d-a0a3-5c6ca9c747d1")],

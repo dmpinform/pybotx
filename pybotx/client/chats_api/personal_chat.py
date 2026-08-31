@@ -2,7 +2,8 @@ from datetime import datetime as dt
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import ConfigDict, ValidationError, field_validator, Field
+from pydantic import ConfigDict, Field, ValidationError, field_validator
+
 from pybotx.client.authorized_botx_method import AuthorizedBotXMethod
 from pybotx.client.botx_method import response_exception_thrower
 from pybotx.client.exceptions.common import ChatNotFoundError
@@ -144,13 +145,13 @@ class PersonalChatMethod(AuthorizedBotXMethod):
         404: response_exception_thrower(ChatNotFoundError),
     }
 
-    async def execute(
+    def execute(
         self,
         payload: BotXAPIPersonalChatRequestPayload,
     ) -> BotXAPIPersonalChatResponsePayload:
         path = "/api/v1/botx/chats/personal"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "GET",
             self._build_url(path),
             params=payload.as_query_params(),

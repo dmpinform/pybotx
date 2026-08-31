@@ -13,14 +13,12 @@ from pybotx import (
 )
 from pybotx.bot.testing import lifespan_wrapper
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__async_execute_bot_command__wait_for_task_execution(
+def test__execute_bot_command__wait_for_task_execution(
     incoming_message_factory: Callable[..., IncomingMessage],
     correct_handler_trigger: Mock,
     bot_account: BotAccountWithSecret,
@@ -30,20 +28,20 @@ async def test__async_execute_bot_command__wait_for_task_execution(
     collector = HandlerCollector()
 
     @collector.command("/command", description="My command")
-    async def handler(message: IncomingMessage, bot: Bot) -> None:
+    def handler(message: IncomingMessage, bot: Bot) -> None:
         correct_handler_trigger()
 
     bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(bot):
-        await bot.async_execute_bot_command(user_command)
+    with lifespan_wrapper(bot):
+        bot.execute_bot_command(user_command).join()
 
         # - Assert -
         correct_handler_trigger.assert_called_once()
 
 
-async def test__shutdown__wait_for_active_handlers(
+def test__shutdown__wait_for_active_handlers(
     incoming_message_factory: Callable[..., IncomingMessage],
     correct_handler_trigger: Mock,
     bot_account: BotAccountWithSecret,
@@ -53,20 +51,20 @@ async def test__shutdown__wait_for_active_handlers(
     collector = HandlerCollector()
 
     @collector.command("/command", description="My command")
-    async def handler(message: IncomingMessage, bot: Bot) -> None:
+    def handler(message: IncomingMessage, bot: Bot) -> None:
         correct_handler_trigger()
 
     bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    bot.async_execute_bot_command(user_command)
-    await bot.shutdown()
+    bot.execute_bot_command(user_command)
+    bot.shutdown()
 
     # - Assert -
     correct_handler_trigger.assert_called_once()
 
 
-async def test__fetch_tokens__skips_for_auth_v2(
+def test__fetch_tokens__skips_for_auth_v2(
     respx_mock: MockRouter,
     bot_account: BotAccountWithSecret,
 ) -> None:
@@ -79,10 +77,10 @@ async def test__fetch_tokens__skips_for_auth_v2(
     )
 
     # - Act -
-    await bot.fetch_tokens()
+    bot.fetch_tokens()
 
     # - Assert -
     assert len(respx_mock.calls) == 0
 
     # Cleanup
-    await bot.shutdown()
+    bot.shutdown()

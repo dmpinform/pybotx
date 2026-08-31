@@ -1,6 +1,6 @@
+from collections.abc import Callable
 from datetime import datetime
 from http import HTTPStatus
-from collections.abc import Callable
 from uuid import UUID
 
 import httpx
@@ -16,14 +16,12 @@ from pybotx import (
     lifespan_wrapper,
 )
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__get_message_status__event_not_found_error_raised(
+def test__get_message_status__event_not_found_error_raised(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -48,9 +46,9 @@ async def test__get_message_status__event_not_found_error_raised(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
+    with lifespan_wrapper(built_bot) as bot:
         with pytest.raises(EventNotFoundError) as exc:
-            await bot.get_message_status(
+            bot.get_message_status(
                 bot_id=bot_id,
                 sync_id=UUID("fe1f285c-073e-4231-b190-2959f28168cc"),
             )
@@ -60,7 +58,7 @@ async def test__get_message_status__event_not_found_error_raised(
         assert endpoint.called
 
 
-async def test__get_message_status__succeed(
+def test__get_message_status__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -99,8 +97,8 @@ async def test__get_message_status__succeed(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        message_status = await bot.get_message_status(
+    with lifespan_wrapper(built_bot) as bot:
+        message_status = bot.get_message_status(
             bot_id=bot_id,
             sync_id=UUID("fe1f285c-073e-4231-b190-2959f28168cc"),
         )

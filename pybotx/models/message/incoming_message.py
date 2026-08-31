@@ -3,6 +3,8 @@ from types import SimpleNamespace
 from typing import Any, TypeGuard, cast
 from uuid import UUID
 
+from pydantic import Field, TypeAdapter, ValidationError, field_validator
+
 from pybotx.logger import logger
 from pybotx.models.attachments import (
     BotAPIAttachment,
@@ -42,7 +44,6 @@ from pybotx.models.message.mentions import (
 )
 from pybotx.models.message.reply import BotAPIReply, Reply
 from pybotx.models.stickers import Sticker
-from pydantic import Field, ValidationError, field_validator, TypeAdapter
 
 
 @dataclass(slots=True)

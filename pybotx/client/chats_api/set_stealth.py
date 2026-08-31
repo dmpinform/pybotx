@@ -41,10 +41,10 @@ class SetStealthMethod(AuthorizedBotXMethod):
         404: response_exception_thrower(ChatNotFoundError),
     }
 
-    async def execute(self, payload: BotXAPISetStealthRequestPayload) -> None:
+    def execute(self, payload: BotXAPISetStealthRequestPayload) -> None:
         path = "/api/v3/botx/chats/stealth_set"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "POST",
             self._build_url(path),
             json=payload.jsonable_dict(),

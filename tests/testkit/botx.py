@@ -1,8 +1,8 @@
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from http import HTTPStatus
 from typing import Any, cast
-from collections.abc import Mapping
 
 import httpx
 from deepdiff import DeepDiff

@@ -12,7 +12,7 @@
 
 * Простая для использования
 * Поддерживает коллбэки BotX
-* Легко интегрируется с асинхронными веб-фреймворками
+* Легко интегрируется с веб-фреймворками
 * Полное покрытие тестами
 * Полное покрытие аннотациями типов
 
@@ -72,8 +72,8 @@ collector = HandlerCollector()
 
 
 @collector.command("/echo", description="Send back the received message body")
-async def echo_handler(message: IncomingMessage, bot: Bot) -> None:
-    await bot.answer_message(message.body)
+def echo_handler(message: IncomingMessage, bot: Bot) -> None:
+    bot.answer_message(message.body)
 
 
 # Сюда можно добавлять свои обработчики команд
@@ -102,7 +102,7 @@ app.add_event_handler("shutdown", bot.shutdown)
 # (сообщения и системные события).
 @app.post("/command")
 async def command_handler(request: Request) -> JSONResponse:
-    bot.async_execute_raw_bot_command(
+    bot.execute_raw_bot_command(
         await request.json(),
         request_headers=request.headers,
     )
@@ -115,7 +115,7 @@ async def command_handler(request: Request) -> JSONResponse:
 # На этот эндпоинт приходят события BotX для SmartApps, обрабатываемые синхронно.
 @app.post("/smartapps/request")
 async def sync_smartapp_event_handler(request: Request) -> JSONResponse:
-    response = await bot.sync_execute_raw_smartapp_event(
+    response = bot.sync_execute_raw_smartapp_event(
         await request.json(),
         request_headers=request.headers,
     )
@@ -126,7 +126,7 @@ async def sync_smartapp_event_handler(request: Request) -> JSONResponse:
 # доступность бота и его список команд.
 @app.get("/status")
 async def status_handler(request: Request) -> JSONResponse:
-    status = await bot.raw_get_status(
+    status = bot.raw_get_status(
         dict(request.query_params),
         request_headers=request.headers,
     )
@@ -137,7 +137,7 @@ async def status_handler(request: Request) -> JSONResponse:
 # выполнения асинхронных методов в BotX.
 @app.post("/notification/callback")
 async def callback_handler(request: Request) -> JSONResponse:
-    await bot.set_raw_botx_method_result(
+    bot.set_raw_botx_method_result(
         await request.json(),
         verify_request=False,
     )
@@ -165,32 +165,32 @@ collector = HandlerCollector()
 
 
 @collector.command("/visible", description="Visible command")
-async def visible_handler(_: IncomingMessage, bot: Bot) -> None:
+def visible_handler(_: IncomingMessage, bot: Bot) -> None:
     # Обработчик команды бота. Команда видимая, поэтому описание
     # является обязательным.
     print("Hello from `/visible` handler")
 
 
 @collector.command("/_invisible", visible=False)
-async def invisible_handler(_: IncomingMessage, bot: Bot) -> None:
+def invisible_handler(_: IncomingMessage, bot: Bot) -> None:
     # Невидимая команда - не отображается в списке команд бота
     # и не нуждается в описании.
     print("Hello from `/invisible` handler")
 
 
-async def is_admin(status_recipient: StatusRecipient, bot: Bot) -> bool:
+def is_admin(status_recipient: StatusRecipient, bot: Bot) -> bool:
     return status_recipient.huid in ADMIN_HUIDS
 
 
 @collector.command("/admin-command", visible=is_admin)
-async def admin_command_handler(_: IncomingMessage, bot: Bot) -> None:
+def admin_command_handler(_: IncomingMessage, bot: Bot) -> None:
     # Команда показывается только если пользователь является админом.
     # Список команд запрашивается при открытии чата в приложении.
     print("Hello from `/admin-command` handler")
 
 
 @collector.default_message_handler
-async def default_handler(_: IncomingMessage, bot: Bot) -> None:
+def default_handler(_: IncomingMessage, bot: Bot) -> None:
     # Если команда не была найдена, вызывается `default_message_handler`,
     # если он определён. Такой обработчик может быть только один.
     print("Hello from default handler")
@@ -208,14 +208,14 @@ collector = HandlerCollector()
 
 
 @collector.chat_created
-async def chat_created_handler(event: ChatCreatedEvent, bot: Bot) -> None:
+def chat_created_handler(event: ChatCreatedEvent, bot: Bot) -> None:
     # Работа с событиями производится с помощью специальных обработчиков.
     # На каждое событие можно объявить только один такой обработчик.
     print(f"Got `chat_created` event: {event}")
 
 
 @collector.smartapp_event
-async def smartapp_event_handler(event: SmartAppEvent, bot: Bot) -> None:
+def smartapp_event_handler(event: SmartAppEvent, bot: Bot) -> None:
     print(f"Got `smartapp_event` event: {event}")
 ```
 
@@ -230,7 +230,7 @@ collector = HandlerCollector()
 
 # Обработчик синхронных Smartapp событий, приходящих на эндпоинт `/smartapps/request`
 @collector.sync_smartapp_event
-async def handle_sync_smartapp_event(
+def handle_sync_smartapp_event(
     event: SmartAppEvent, bot: Bot,
 ) -> BotAPISyncSmartAppEventResultResponse:
     print(f"Got sync smartapp event: {event}")
@@ -246,14 +246,14 @@ async def handle_sync_smartapp_event(
 *(Этот функционал относится исключительно к `pybotx`)*
 
 ```python
-from httpx import AsyncClient
+from httpx import Client
 
 from pybotx import *
 
 collector = HandlerCollector()
 
 
-async def custom_api_client_middleware(
+def custom_api_client_middleware(
     message: IncomingMessage,
     bot: Bot,
     call_next: IncomingMessageHandlerFunc,
@@ -261,17 +261,17 @@ async def custom_api_client_middleware(
     # До вызова `call_next` (обязателен в каждой миддлвари) располагается
     # код, который выполняется до того, как сообщение дойдёт до
     # своего обработчика.
-    async_client = AsyncClient()
+    client = Client()
 
     # У сообщения есть объект состояния, в который миддлвари могут добавлять
     # необходимые данные.
-    message.state.async_client = async_client
+    message.state.client = client
 
-    await call_next(message, bot)
+    call_next(message, bot)
 
     # После вызова `call_next` выполняется код, когда обработчик уже
     # завершил свою работу.
-    await async_client.aclose()
+    client.close()
 
 
 @collector.command(
@@ -279,9 +279,9 @@ async def custom_api_client_middleware(
     description="Fetch resource from passed URL",
     middlewares=[custom_api_client_middleware],
 )
-async def fetch_resource_handler(message: IncomingMessage, bot: Bot) -> None:
-    async_client = message.state.async_client
-    response = await async_client.get(message.argument)
+def fetch_resource_handler(message: IncomingMessage, bot: Bot) -> None:
+    client = message.state.client
+    response = client.get(message.argument)
     print(response.status_code)
 ```
 
@@ -297,25 +297,25 @@ from pybotx import *
 ADMIN_HUIDS = (UUID("123e4567-e89b-12d3-a456-426614174000"),)
 
 
-async def request_id_middleware(
+def request_id_middleware(
     message: IncomingMessage,
     bot: Bot,
     call_next: IncomingMessageHandlerFunc,
 ) -> None:
     message.state.request_id = uuid4()
-    await call_next(message, bot)
+    call_next(message, bot)
 
 
-async def ensure_admin_middleware(
+def ensure_admin_middleware(
     message: IncomingMessage,
     bot: Bot,
     call_next: IncomingMessageHandlerFunc,
 ) -> None:
     if message.sender.huid not in ADMIN_HUIDS:
-        await bot.answer_message("You are not admin")
+        bot.answer_message("You are not admin")
         return
 
-    await call_next(message, bot)
+    call_next(message, bot)
 
 
 # Для того чтобы добавить новый обработчик команды,
@@ -347,37 +347,37 @@ collector = HandlerCollector()
 
 
 @collector.command("/answer", description="Answer to sender")
-async def answer_to_sender_handler(message: IncomingMessage, bot: Bot) -> None:
+def answer_to_sender_handler(message: IncomingMessage, bot: Bot) -> None:
     # Т.к. нам известно, откуда пришло сообщение, у `pybotx` есть необходимый
     # контекст для отправки ответа.
-    await bot.answer_message("Text")
+    bot.answer_message("Text")
 
 
 @collector.command("/send", description="Send message to specified chat")
-async def send_message_handler(message: IncomingMessage, bot: Bot) -> None:
+def send_message_handler(message: IncomingMessage, bot: Bot) -> None:
     try:
         chat_id = UUID(message.argument)
     except ValueError:
-        await bot.answer_message("Invalid chat id")
+        bot.answer_message("Invalid chat id")
         return
 
     # В данном случае нас интересует не ответ, а отправка сообщения
     # в другой чат. Чат должен существовать и бот должен быть в нём.
     try:
-        await bot.send_message(
+        bot.send_message(
             bot_id=message.bot.id,
             chat_id=chat_id,
             body="Text",
         )
     except Exception as exc:
-        await bot.answer_message(f"Error: {exc}")
+        bot.answer_message(f"Error: {exc}")
         return
 
-    await bot.answer_message("Message was send")
+    bot.answer_message("Message was send")
 
 
 @collector.command("/prebuild-answer", description="Answer with prebuild message")
-async def prebuild_answer_handler(message: IncomingMessage, bot: Bot) -> None:
+def prebuild_answer_handler(message: IncomingMessage, bot: Bot) -> None:
     # С помощью OutgoingMessage можно выносить логику
     # формирования ответов в другие модули.
     answer = OutgoingMessage(
@@ -385,7 +385,7 @@ async def prebuild_answer_handler(message: IncomingMessage, bot: Bot) -> None:
         chat_id=message.chat.id,
         body="Text",
     )
-    await bot.send(message=answer)
+    bot.send(message=answer)
 ```
 
 
@@ -400,7 +400,7 @@ collector = HandlerCollector()
 
 
 @collector.command("/bubbles", description="Send buttons")
-async def bubbles_handler(message: IncomingMessage, bot: Bot) -> None:
+def bubbles_handler(message: IncomingMessage, bot: Bot) -> None:
     # Если вам нужна клавиатура под полем для ввода сообщения,
     # используйте `KeyboardMarkup`. Этот класс имеет те же методы,
     # что и `BubbleMarkup`.
@@ -428,7 +428,7 @@ async def bubbles_handler(message: IncomingMessage, bot: Bot) -> None:
         link="https://example.com",
     )
 
-    await bot.answer_message(
+    bot.answer_message(
         "The time has come to make a choice, Mr. Anderson:",
         bubbles=bubbles,
     )
@@ -446,19 +446,19 @@ collector = HandlerCollector()
 
 
 @collector.command("/send-contact", description="Send author's contact")
-async def send_contact_handler(message: IncomingMessage, bot: Bot) -> None:
+def send_contact_handler(message: IncomingMessage, bot: Bot) -> None:
     contact = MentionBuilder.contact(message.sender.huid)
-    await bot.answer_message(f"Author is {contact}")
+    bot.answer_message(f"Author is {contact}")
 
 
 @collector.command("/echo-contacts", description="Send back recieved contacts")
-async def echo_contact_handler(message: IncomingMessage, bot: Bot) -> None:
+def echo_contact_handler(message: IncomingMessage, bot: Bot) -> None:
     if not (contacts := message.mentions.contacts):
-        await bot.answer_message("Please send at least one contact")
+        bot.answer_message("Please send at least one contact")
         return
 
     answer = ", ".join(map(str, contacts))
-    await bot.answer_message(answer)
+    bot.answer_message(answer)
 ```
 
 
@@ -467,7 +467,7 @@ async def echo_contact_handler(message: IncomingMessage, bot: Bot) -> None:
 *([подробное описание функции](
 https://docs.express.ms/chatbots/developer-guide/development-and-debugging/examples/#%D0%BE%D1%82%D0%BF%D1%80%D0%B0%D0%B2%D0%BA%D0%B0-%D1%84%D0%B0%D0%B9%D0%BB%D0%B0-%D0%B2-%D1%81%D0%BE%D0%BE%D0%B1%D1%89%D0%B5%D0%BD%D0%B8%D0%B8))*
 ```python
-from aiofiles.tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile
 
 from pybotx import *
 
@@ -475,25 +475,25 @@ collector = HandlerCollector()
 
 
 @collector.command("/send-file", description="Send file")
-async def send_file_handler(message: IncomingMessage, bot: Bot) -> None:
+def send_file_handler(message: IncomingMessage, bot: Bot) -> None:
     # Для создания файла используется file-like object
-    # с поддержкой асинхронных операций.
-    async with NamedTemporaryFile("wb+") as async_buffer:
-        await async_buffer.write(b"Hello, world!\n")
-        await async_buffer.seek(0)
+    # с поддержкой файловых операций.
+    with NamedTemporaryFile("wb+") as buffer:
+        buffer.write(b"Hello, world!\n")
+        buffer.seek(0)
 
-        file = await OutgoingAttachment.from_async_buffer(async_buffer, "test.txt")
+        file = OutgoingAttachment.from_buffer(buffer, "test.txt")
 
-    await bot.answer_message("Attached file", file=file)
+    bot.answer_message("Attached file", file=file)
 
 
 @collector.command("/echo-file", description="Echo file")
-async def echo_file_handler(message: IncomingMessage, bot: Bot) -> None:
+def echo_file_handler(message: IncomingMessage, bot: Bot) -> None:
     if not (attached_file := message.file):
-        await bot.answer_message("Attached file is required")
+        bot.answer_message("Attached file is required")
         return
 
-    await bot.answer_message("", file=attached_file)
+    bot.answer_message("", file=attached_file)
 ```
 
 ### Редактирование сообщения
@@ -507,7 +507,7 @@ collector = HandlerCollector()
 
 
 @collector.command("/increment", description="Self-updating widget")
-async def increment_handler(message: IncomingMessage, bot: Bot) -> None:
+def increment_handler(message: IncomingMessage, bot: Bot) -> None:
     if message.source_sync_id:  # ID сообщения, в котором была нажата кнопка.
         current_value = message.data["current_value"]
         next_value = current_value + 1
@@ -524,14 +524,14 @@ async def increment_handler(message: IncomingMessage, bot: Bot) -> None:
     )
 
     if message.source_sync_id:
-        await bot.edit_message(
+        bot.edit_message(
             bot_id=message.bot.id,
             sync_id=message.source_sync_id,
             body=answer_text,
             bubbles=bubbles,
         )
     else:
-        await bot.answer_message(answer_text, bubbles=bubbles)
+        bot.answer_message(answer_text, bubbles=bubbles)
 ```
 
 ### Удаление сообщения
@@ -545,9 +545,9 @@ collector = HandlerCollector()
 
 
 @collector.command("/deleted-message", description="Self-deleted message")
-async def deleted_message_handler(message: IncomingMessage, bot: Bot) -> None:
+def deleted_message_handler(message: IncomingMessage, bot: Bot) -> None:
     if message.source_sync_id:  # ID сообщения, в котором была нажата кнопка.
-        await bot.delete_message(
+        bot.delete_message(
             bot_id=message.bot.id,
             sync_id=message.source_sync_id,
         )
@@ -559,7 +559,7 @@ async def deleted_message_handler(message: IncomingMessage, bot: Bot) -> None:
         label="Delete",
     )
 
-    await bot.answer_message("Self-deleted message", bubbles=bubbles)
+    bot.answer_message("Self-deleted message", bubbles=bubbles)
 ```
 
 
@@ -573,14 +573,14 @@ from loguru import logger
 from pybotx import *
 
 
-async def internal_error_handler(
+def internal_error_handler(
     message: IncomingMessage,
     bot: Bot,
     exc: Exception,
 ) -> None:
     logger.exception("Internal error:")
 
-    await bot.answer_message(
+    bot.answer_message(
         "**Error:** internal error, please contact your system administrator",
     )
 
@@ -605,24 +605,24 @@ collector = HandlerCollector()
 
 
 @collector.command("/create-group-chat", description="Create group chat")
-async def create_group_chat_handler(message: IncomingMessage, bot: Bot) -> None:
+def create_group_chat_handler(message: IncomingMessage, bot: Bot) -> None:
     if not (contacts := message.mentions.contacts):
-        await bot.answer_message("Please send at least one contact")
+        bot.answer_message("Please send at least one contact")
         return
 
     try:
-        chat_id = await bot.create_chat(
+        chat_id = bot.create_chat(
             bot_id=message.bot.id,
             name="New group chat",
             chat_type=ChatTypes.GROUP_CHAT,
             huids=[contact.entity_id for contact in contacts],
         )
     except (ChatCreationProhibitedError, ChatCreationError) as exc:
-        await bot.answer_message(str(exc))
+        bot.answer_message(str(exc))
         return
 
     chat_mention = MentionBuilder.chat(chat_id)
-    await bot.answer_message(f"Chat created: {chat_mention}")
+    bot.answer_message(f"Chat created: {chat_mention}")
 ```
 
 ### Поиск пользователей
@@ -638,17 +638,17 @@ collector = HandlerCollector()
 
 
 @collector.command("/my-info", description="Get info of current user")
-async def search_user_handler(message: IncomingMessage, bot: Bot) -> None:
+def search_user_handler(message: IncomingMessage, bot: Bot) -> None:
     try:
-        user_info = await bot.search_user_by_huid(
+        user_info = bot.search_user_by_huid(
             bot_id=message.bot.id,
             huid=message.sender.huid,
         )
     except UserNotFoundError:  # Если пользователь и бот находятся на разных CTS
-        await bot.answer_message("User not found. Maybe you are on a different cts.")
+        bot.answer_message("User not found. Maybe you are on a different cts.")
         return
 
-    await bot.answer_message(f"Your info:\n{dataclasses.asdict(user_info)}\n")
+    bot.answer_message(f"Your info:\n{dataclasses.asdict(user_info)}\n")
 ```
 
 ### Получение списка пользователей
@@ -662,13 +662,13 @@ collector = HandlerCollector()
 
 
 @collector.command("/get_users_list", description="Get a list of users")
-async def users_list_handler(message: IncomingMessage, bot: Bot) -> None:
-    async with bot.users_as_csv(
+def users_list_handler(message: IncomingMessage, bot: Bot) -> None:
+    with bot.users_as_csv(
         bot_id=message.bot.id,
         cts_user=True,
         unregistered=False,
         botx=False,
     ) as users:
-        async for user in users:
+        for user in users:
             print(user)
 ```

@@ -1,11 +1,12 @@
 from typing import Literal
 from uuid import UUID
 
+from pydantic import Field
+
 from pybotx.client.authorized_botx_method import AuthorizedBotXMethod
 from pybotx.missing import Missing, Undefined
 from pybotx.models.api_base import UnverifiedPayloadBaseModel, VerifiedPayloadBaseModel
 from pybotx.models.enums import SmartappManifestWebLayoutChoices as WebLayoutChoices
-from pydantic import Field
 
 
 class SmartappManifestIosParams(VerifiedPayloadBaseModel):
@@ -93,13 +94,13 @@ class BotXAPISmartAppManifestResponsePayload(VerifiedPayloadBaseModel):
 
 
 class SmartAppManifestMethod(AuthorizedBotXMethod):
-    async def execute(
+    def execute(
         self,
         payload: BotXAPISmartAppManifestRequestPayload,
     ) -> BotXAPISmartAppManifestResponsePayload:
         path = "/api/v1/botx/smartapps/manifest"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "POST",
             self._build_url(path),
             json=payload.jsonable_dict(),

@@ -11,14 +11,12 @@ from pybotx import (
     lifespan_wrapper,
 )
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__cts_login__succeed(
+def test__cts_login__succeed(
     bot_account: BotAccountWithSecret,
 ) -> None:
     # - Arrange -
@@ -65,7 +63,7 @@ async def test__cts_login__succeed(
     cts_login: CTSLoginEvent | None = None
 
     @collector.cts_login
-    async def cts_login_handler(event: CTSLoginEvent, bot: Bot) -> None:
+    def cts_login_handler(event: CTSLoginEvent, bot: Bot) -> None:
         nonlocal cts_login
         cts_login = event
         # Drop `raw_command` from asserting
@@ -74,8 +72,8 @@ async def test__cts_login__succeed(
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_raw_bot_command(payload, verify_request=False)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_raw_bot_command(payload, verify_request=False)
 
     # - Assert -
     assert cts_login == CTSLoginEvent(

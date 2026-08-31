@@ -24,13 +24,13 @@ class SearchUserByLoginMethod(AuthorizedBotXMethod):
         404: response_exception_thrower(UserNotFoundError),
     }
 
-    async def execute(
+    def execute(
         self,
         payload: BotXAPISearchUserByLoginRequestPayload,
     ) -> BotXAPISearchUserResponsePayload:
         path = "/api/v3/botx/users/by_login"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "GET",
             self._build_url(path),
             params=payload.jsonable_dict(),

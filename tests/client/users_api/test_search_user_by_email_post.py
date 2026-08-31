@@ -12,14 +12,12 @@ from pybotx.client.exceptions.http import (
 )
 from tests.testkit import BotXRequest, error_payload, mock_botx, ok_payload
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__search_user_by_email_post__user_not_found_error_raised(
+def test__search_user_by_email_post__user_not_found_error_raised(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -40,19 +38,18 @@ async def test__search_user_by_email_post__user_not_found_error_raised(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        with pytest.raises(UserNotFoundError) as exc:
-            await bot.search_user_by_email_post(
-                bot_id=bot_id,
-                email="ad_user@cts.com",
-            )
+    with bot_factory() as bot, pytest.raises(UserNotFoundError) as exc:
+        bot.search_user_by_email_post(
+            bot_id=bot_id,
+            email="ad_user@cts.com",
+        )
 
     # - Assert -
     assert "user_not_found" in str(exc.value)
     assert endpoint.called
 
 
-async def test__search_user_by_email_post__succeed(
+def test__search_user_by_email_post__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -75,8 +72,8 @@ async def test__search_user_by_email_post__succeed(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        user = await bot.search_user_by_email_post(
+    with bot_factory() as bot:
+        user = bot.search_user_by_email_post(
             bot_id=bot_id,
             email="ad_user@cts.com",
         )
@@ -86,7 +83,7 @@ async def test__search_user_by_email_post__succeed(
     assert endpoint.called
 
 
-async def test__search_user_by_email_post_without_extra_data__succeed(
+def test__search_user_by_email_post_without_extra_data__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -109,8 +106,8 @@ async def test__search_user_by_email_post_without_extra_data__succeed(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        user = await bot.search_user_by_email_post(
+    with bot_factory() as bot:
+        user = bot.search_user_by_email_post(
             bot_id=bot_id,
             email="ad_user@cts.com",
         )
@@ -120,7 +117,7 @@ async def test__search_user_by_email_post_without_extra_data__succeed(
     assert endpoint.called
 
 
-async def test__search_user_by_email_post__list_response_logs_warning(
+def test__search_user_by_email_post__list_response_logs_warning(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -141,8 +138,8 @@ async def test__search_user_by_email_post__list_response_logs_warning(
         HTTPStatus.OK,
     )
 
-    async with bot_factory() as bot:
-        await bot.search_user_by_email_post(
+    with bot_factory() as bot:
+        bot.search_user_by_email_post(
             bot_id=bot_id,
             email="ad_user@cts.com",
         )
@@ -151,7 +148,7 @@ async def test__search_user_by_email_post__list_response_logs_warning(
     assert endpoint.called
 
 
-async def test__search_user_by_email_post__non_400_status_is_not_retried(
+def test__search_user_by_email_post__non_400_status_is_not_retried(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -170,17 +167,16 @@ async def test__search_user_by_email_post__non_400_status_is_not_retried(
         HTTPStatus.INTERNAL_SERVER_ERROR,
     )
 
-    async with bot_factory() as bot:
-        with pytest.raises(InvalidBotXStatusCodeError):
-            await bot.search_user_by_email_post(
-                bot_id=bot_id,
-                email="ad_user@cts.com",
-            )
+    with bot_factory() as bot, pytest.raises(InvalidBotXStatusCodeError):
+        bot.search_user_by_email_post(
+            bot_id=bot_id,
+            email="ad_user@cts.com",
+        )
 
     assert endpoint.called
 
 
-async def test__search_user_by_email_post__empty_list_raises_user_not_found(
+def test__search_user_by_email_post__empty_list_raises_user_not_found(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -199,17 +195,16 @@ async def test__search_user_by_email_post__empty_list_raises_user_not_found(
         HTTPStatus.OK,
     )
 
-    async with bot_factory() as bot:
-        with pytest.raises(UserNotFoundError):
-            await bot.search_user_by_email_post(
-                bot_id=bot_id,
-                email="ad_user@cts.com",
-            )
+    with bot_factory() as bot, pytest.raises(UserNotFoundError):
+        bot.search_user_by_email_post(
+            bot_id=bot_id,
+            email="ad_user@cts.com",
+        )
 
     assert endpoint.called
 
 
-async def test__search_user_by_email_post__invalid_payload_raises_invalid_response(
+def test__search_user_by_email_post__invalid_payload_raises_invalid_response(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -229,11 +224,10 @@ async def test__search_user_by_email_post__invalid_payload_raises_invalid_respon
         HTTPStatus.OK,
     )
 
-    async with bot_factory() as bot:
-        with pytest.raises(InvalidBotXResponsePayloadError):
-            await bot.search_user_by_email_post(
-                bot_id=bot_id,
-                email="ad_user@cts.com",
-            )
+    with bot_factory() as bot, pytest.raises(InvalidBotXResponsePayloadError):
+        bot.search_user_by_email_post(
+            bot_id=bot_id,
+            email="ad_user@cts.com",
+        )
 
     assert endpoint.called

@@ -1,16 +1,16 @@
-from contextlib import asynccontextmanager
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
+from tempfile import SpooledTemporaryFile
 from typing import Literal, cast
-from collections.abc import AsyncGenerator
 from uuid import UUID
 
-from aiofiles.tempfile import SpooledTemporaryFile
+from pydantic import ConfigDict
 
 from pybotx.bot.contextvars import bot_id_var, bot_var, chat_id_var
 from pybotx.constants import CHUNK_SIZE
 from pybotx.missing import MissingOptional, Undefined
 from pybotx.models.api_base import VerifiedPayloadBaseModel
-from pydantic import ConfigDict
 from pybotx.models.enums import (
     APIAttachmentTypes,
     AttachmentTypes,
@@ -20,7 +20,7 @@ from pybotx.models.enums import (
 
 
 @dataclass(slots=True)
-class AsyncFileBase:
+class FileBase:
     type: AttachmentTypes
     filename: str
     size: int
@@ -50,16 +50,16 @@ class AsyncFileBase:
     def file_hash(self) -> str:
         return self._file_hash
 
-    @asynccontextmanager
-    async def open(self, *, is_preview: bool = False) -> AsyncGenerator[SpooledTemporaryFile, None]:
+    @contextmanager
+    def open(self, *, is_preview: bool = False) -> Iterator[SpooledTemporaryFile[bytes]]:
         bot = bot_var.get()
 
-        async with SpooledTemporaryFile(max_size=CHUNK_SIZE) as tmp_file:
-            await bot.download_file(
+        with SpooledTemporaryFile(max_size=CHUNK_SIZE) as tmp_file:
+            bot.download_file(
                 bot_id=bot_id_var.get(),
                 chat_id=chat_id_var.get(),
                 file_id=self._file_id,
-                async_buffer=tmp_file,
+                buffer=tmp_file,
                 is_preview=is_preview,
             )
 
@@ -67,23 +67,23 @@ class AsyncFileBase:
 
 
 @dataclass(slots=True)
-class Image(AsyncFileBase):
+class Image(FileBase):
     type: Literal[AttachmentTypes.IMAGE]
 
 
 @dataclass(slots=True)
-class Video(AsyncFileBase):
+class Video(FileBase):
     type: Literal[AttachmentTypes.VIDEO]
     duration: int = 0
 
 
 @dataclass(slots=True)
-class Document(AsyncFileBase):
+class Document(FileBase):
     type: Literal[AttachmentTypes.DOCUMENT]
 
 
 @dataclass(slots=True)
-class Voice(AsyncFileBase):
+class Voice(FileBase):
     type: Literal[AttachmentTypes.VOICE]
     duration: int = 0
 

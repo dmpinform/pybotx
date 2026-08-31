@@ -13,14 +13,12 @@ from pybotx import (
     lifespan_wrapper,
 )
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__added_to_chat__succeed(
+def test__added_to_chat__succeed(
     bot_account: BotAccountWithSecret,
 ) -> None:
     # - Arrange -
@@ -69,7 +67,7 @@ async def test__added_to_chat__succeed(
     added_to_chat: AddedToChatEvent | None = None
 
     @collector.added_to_chat
-    async def added_to_chat_handler(event: AddedToChatEvent, bot: Bot) -> None:
+    def added_to_chat_handler(event: AddedToChatEvent, bot: Bot) -> None:
         nonlocal added_to_chat
         added_to_chat = event
         # Drop `raw_command` from asserting
@@ -78,8 +76,8 @@ async def test__added_to_chat__succeed(
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_raw_bot_command(payload, verify_request=False)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_raw_bot_command(payload, verify_request=False)
 
     # - Assert -
     assert added_to_chat == AddedToChatEvent(

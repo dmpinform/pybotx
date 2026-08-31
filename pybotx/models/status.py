@@ -2,6 +2,8 @@ from dataclasses import asdict, dataclass
 from typing import Any, Literal, NewType
 from uuid import UUID
 
+from pydantic import field_validator
+
 from pybotx.models.api_base import VerifiedPayloadBaseModel
 from pybotx.models.enums import (
     APIChatTypes,
@@ -9,7 +11,6 @@ from pybotx.models.enums import (
     convert_chat_type_to_domain,
 )
 from pybotx.models.message.incoming_message import IncomingMessage
-from pydantic import field_validator
 
 BotMenu = NewType("BotMenu", dict[str, str])
 

@@ -1,7 +1,8 @@
-import asyncio
+import time
+from collections.abc import Sequence
+from concurrent.futures import ThreadPoolExecutor
 from http import HTTPStatus
 from typing import Any
-from collections.abc import Sequence
 from uuid import UUID
 
 import pytest
@@ -16,7 +17,6 @@ from pybotx import (
 from tests.testkit import BotXRequest, error_payload, mock_botx, ok_payload
 
 pytestmark = [
-    pytest.mark.asyncio,
     pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
@@ -33,7 +33,7 @@ REQUEST = BotXRequest(
 )
 
 
-async def test__send_internal_bot_notification__rate_limit_reached_error_raised(
+def test__send_internal_bot_notification__rate_limit_reached_error_raised(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -54,13 +54,12 @@ async def test__send_internal_bot_notification__rate_limit_reached_error_raised(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        with pytest.raises(RateLimitReachedError) as exc:
-            await bot.send_internal_bot_notification(
-                bot_id=bot_id,
-                chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
-                data={"foo": "bar"},
-            )
+    with bot_factory() as bot, pytest.raises(RateLimitReachedError) as exc:
+        bot.send_internal_bot_notification(
+            bot_id=bot_id,
+            chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
+            data={"foo": "bar"},
+        )
 
     # - Assert -
     assert "too_many_requests" in str(exc.value)
@@ -104,7 +103,7 @@ async def test__send_internal_bot_notification__rate_limit_reached_error_raised(
         ),
     ],
 )
-async def test__send_internal_bot_notification__callback_error_raised(
+def test__send_internal_bot_notification__callback_error_raised(
     reason: str,
     error_data: dict[str, Any],
     expected_exc: type[Exception],
@@ -124,17 +123,15 @@ async def test__send_internal_bot_notification__callback_error_raised(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        task = asyncio.create_task(
-            bot.send_internal_bot_notification(
+    with bot_factory() as bot, ThreadPoolExecutor(max_workers=1) as executor:
+        task = executor.submit(
+            bot.send_internal_bot_notification,
                 bot_id=bot_id,
                 chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
                 data={"foo": "bar"},
-            ),
         )
-        await asyncio.sleep(0)  # Return control to event loop
-
-        await bot.set_raw_botx_method_result(
+        time.sleep(0.05)  # Let the request register its callback
+        bot.set_raw_botx_method_result(
             {
                 "status": "error",
                 "sync_id": "21a9ec9e-f21f-4406-ac44-1a78d2ccf9e3",
@@ -147,14 +144,14 @@ async def test__send_internal_bot_notification__callback_error_raised(
 
     # - Assert -
     with pytest.raises(expected_exc) as exc:
-        await task
+        task.result()
 
     for fragment in expected_fragments:
         assert fragment in str(exc.value)
     assert endpoint.called
 
 
-async def test__send_internal_bot_notification__succeed(
+def test__send_internal_bot_notification__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -170,17 +167,15 @@ async def test__send_internal_bot_notification__succeed(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        task = asyncio.create_task(
-            bot.send_internal_bot_notification(
+    with bot_factory() as bot, ThreadPoolExecutor(max_workers=1) as executor:
+        task = executor.submit(
+            bot.send_internal_bot_notification,
                 bot_id=bot_id,
                 chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
                 data={"foo": "bar"},
-            ),
         )
-        await asyncio.sleep(0)  # Return control to event loop
-
-        await bot.set_raw_botx_method_result(
+        time.sleep(0.05)  # Let the request register its callback
+        bot.set_raw_botx_method_result(
             {
                 "status": "ok",
                 "sync_id": "21a9ec9e-f21f-4406-ac44-1a78d2ccf9e3",
@@ -190,5 +185,5 @@ async def test__send_internal_bot_notification__succeed(
         )
 
     # - Assert -
-    assert await task == UUID("21a9ec9e-f21f-4406-ac44-1a78d2ccf9e3")
+    assert task.result() == UUID("21a9ec9e-f21f-4406-ac44-1a78d2ccf9e3")
     assert endpoint.called

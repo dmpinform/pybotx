@@ -1,13 +1,14 @@
 import json
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Literal, cast
-from collections.abc import Iterator
+
+from pydantic import RootModel
+from pydantic_core import to_jsonable_python
 
 from pybotx.missing import Missing, Undefined
 from pybotx.models.api_base import UnverifiedPayloadBaseModel, _remove_undefined
-from pydantic import RootModel
-from pydantic_core import to_jsonable_python
 
 
 class ButtonTextAlign(Enum):

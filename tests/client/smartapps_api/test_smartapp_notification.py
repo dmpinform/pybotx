@@ -7,14 +7,12 @@ from respx.router import MockRouter
 
 from pybotx import Bot, BotAccountWithSecret, HandlerCollector, lifespan_wrapper
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__send_smartapp_notification__succeed(
+def test__send_smartapp_notification__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -45,8 +43,8 @@ async def test__send_smartapp_notification__succeed(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        await bot.send_smartapp_notification(
+    with lifespan_wrapper(built_bot) as bot:
+        bot.send_smartapp_notification(
             bot_id=bot_id,
             chat_id=UUID("705df263-6bfd-536a-9d51-13524afaab5c"),
             smartapp_counter=42,

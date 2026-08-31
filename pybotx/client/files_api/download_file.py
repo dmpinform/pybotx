@@ -3,7 +3,7 @@ from uuid import UUID
 
 import httpx
 
-from pybotx.async_buffer import AsyncBufferWritable
+from pybotx.buffer import BufferWritable
 from pybotx.client.authorized_botx_method import AuthorizedBotXMethod
 from pybotx.client.botx_method import response_exception_thrower
 from pybotx.client.exceptions.common import ChatNotFoundError
@@ -49,20 +49,20 @@ class DownloadFileMethod(AuthorizedBotXMethod):
         404: not_found_error_handler,
     }
 
-    async def execute(
+    def execute(
         self,
         payload: BotXAPIDownloadFileRequestPayload,
-        async_buffer: AsyncBufferWritable,
+        buffer: BufferWritable,
     ) -> None:
         path = "/api/v3/botx/files/download"
 
-        async with self._botx_method_stream(
+        with self._botx_method_stream(
             "GET",
             self._build_url(path),
             params=payload.jsonable_dict(),
         ) as response:
             # https://github.com/nedbat/coveragepy/issues/1223
-            async for chunk in response.aiter_bytes():  # pragma: no branch
-                await async_buffer.write(chunk)
+            for chunk in response.iter_bytes():  # pragma: no branch
+                buffer.write(chunk)
 
-        await async_buffer.seek(0)
+        buffer.seek(0)

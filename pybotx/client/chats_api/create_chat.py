@@ -2,8 +2,8 @@ from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import (
-    Field,
     ConfigDict,
+    Field,
     field_serializer,
     field_validator,
     model_validator,
@@ -85,7 +85,7 @@ class CreateChatMethod(AuthorizedBotXMethod):
         422: response_exception_thrower(ChatCreationError),
     }
 
-    async def execute(
+    def execute(
         self,
         payload: BotXAPICreateChatRequestPayload,
     ) -> BotXAPICreateChatResponsePayload:
@@ -100,7 +100,7 @@ class CreateChatMethod(AuthorizedBotXMethod):
 
         body = payload.model_dump(mode="json", exclude=exclude)
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "POST",
             url,
             json=body,

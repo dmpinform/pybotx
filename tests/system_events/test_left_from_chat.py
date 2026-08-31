@@ -13,14 +13,12 @@ from pybotx import (
     lifespan_wrapper,
 )
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__left_from_chat__succeed(
+def test__left_from_chat__succeed(
     bot_account: BotAccountWithSecret,
 ) -> None:
     # - Arrange -
@@ -68,7 +66,7 @@ async def test__left_from_chat__succeed(
     left_from_chat: LeftFromChatEvent | None = None
 
     @collector.left_from_chat
-    async def left_from_chat_handler(event: LeftFromChatEvent, bot: Bot) -> None:
+    def left_from_chat_handler(event: LeftFromChatEvent, bot: Bot) -> None:
         nonlocal left_from_chat
         left_from_chat = event
         # Drop `raw_command` from asserting
@@ -77,8 +75,8 @@ async def test__left_from_chat__succeed(
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_raw_bot_command(payload, verify_request=False)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_raw_bot_command(payload, verify_request=False)
 
     # - Assert -
     assert left_from_chat == LeftFromChatEvent(

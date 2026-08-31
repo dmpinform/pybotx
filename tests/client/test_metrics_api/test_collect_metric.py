@@ -7,14 +7,12 @@ from respx import MockRouter
 
 from pybotx import Bot, BotAccountWithSecret, HandlerCollector, lifespan_wrapper
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__collect_bot_function_metric__success(
+def test__collect_bot_function_metric__success(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -42,8 +40,8 @@ async def test__collect_bot_function_metric__success(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        await bot.collect_metric(
+    with lifespan_wrapper(built_bot) as bot:
+        bot.collect_metric(
             bot_id=bot_id,
             bot_function="email_sent",
             huids=[UUID("33bd8924-da34-4615-b8ea-f8f7139bf4ef")],

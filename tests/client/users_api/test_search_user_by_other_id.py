@@ -6,16 +6,20 @@ import pytest
 from respx.router import MockRouter
 
 from pybotx import UserFromSearch, UserNotFoundError
-from tests.testkit import BotXRequest, assert_deep_equal, error_payload, mock_botx, ok_payload
+from tests.testkit import (
+    BotXRequest,
+    assert_deep_equal,
+    error_payload,
+    mock_botx,
+    ok_payload,
+)
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__search_user_by_other_id__user_not_found_error_raised(
+def test__search_user_by_other_id__user_not_found_error_raised(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -36,19 +40,18 @@ async def test__search_user_by_other_id__user_not_found_error_raised(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        with pytest.raises(UserNotFoundError) as exc:
-            await bot.search_user_by_other_id(
-                bot_id=bot_id,
-                other_id="some_id",
-            )
+    with bot_factory() as bot, pytest.raises(UserNotFoundError) as exc:
+        bot.search_user_by_other_id(
+            bot_id=bot_id,
+            other_id="some_id",
+        )
 
     # - Assert -
     assert "user_not_found" in str(exc.value)
     assert endpoint.called
 
 
-async def test__search_user_by_other_id__succeed(
+def test__search_user_by_other_id__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -71,8 +74,8 @@ async def test__search_user_by_other_id__succeed(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        user = await bot.search_user_by_other_id(
+    with bot_factory() as bot:
+        user = bot.search_user_by_other_id(
             bot_id=bot_id,
             other_id="some_id",
         )
@@ -82,7 +85,7 @@ async def test__search_user_by_other_id__succeed(
     assert endpoint.called
 
 
-async def test__search_user_by_other_id_without_data__succeed(
+def test__search_user_by_other_id_without_data__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -105,8 +108,8 @@ async def test__search_user_by_other_id_without_data__succeed(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        user = await bot.search_user_by_other_id(
+    with bot_factory() as bot:
+        user = bot.search_user_by_other_id(
             bot_id=bot_id,
             other_id="some_id",
         )

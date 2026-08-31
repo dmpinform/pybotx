@@ -3,6 +3,7 @@ from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import ConfigDict, ValidationError, field_validator
+
 from pybotx.client.authorized_botx_method import AuthorizedBotXMethod
 from pybotx.client.botx_method import response_exception_thrower
 from pybotx.client.exceptions.common import ChatNotFoundError
@@ -125,13 +126,13 @@ class ChatInfoMethod(AuthorizedBotXMethod):
         404: response_exception_thrower(ChatNotFoundError),
     }
 
-    async def execute(
+    def execute(
         self,
         payload: BotXAPIChatInfoRequestPayload,
     ) -> BotXAPIChatInfoResponsePayload:
         path = "/api/v3/botx/chats/info"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "GET",
             self._build_url(path),
             params=payload.as_query_params(),

@@ -1,6 +1,6 @@
+from collections.abc import Callable
 from http import HTTPStatus
 from typing import Any
-from collections.abc import Callable
 from uuid import UUID
 
 import httpx
@@ -35,12 +35,12 @@ collector = HandlerCollector()
 
 
 @collector.command("/debug", description="Simple debug command")
-async def debug_handler(message: IncomingMessage, bot: Bot) -> None:
-    await bot.answer_message("Hi!")
+def debug_handler(message: IncomingMessage, bot: Bot) -> None:
+    bot.answer_message("Hi!")
 
 
 @collector.sync_smartapp_event
-async def handle_sync_smartapp_event(
+def handle_sync_smartapp_event(
     event: SmartAppEvent,
     _: Bot,
 ) -> BotAPISyncSmartAppEventResultResponse:
@@ -75,7 +75,7 @@ async def command_handler(
     bot: Bot = bot_dependency,
 ) -> JSONResponse:
     try:
-        bot.async_execute_raw_bot_command(await request.json(), verify_request=False)
+        bot.execute_raw_bot_command(await request.json(), verify_request=False)
     except ValueError:
         error_label = "Bot command validation error"
         logger.exception(error_label)
@@ -105,7 +105,7 @@ async def sync_smartapp_event_handler(
     bot: Bot = bot_dependency,
 ) -> JSONResponse:
     try:
-        response = await bot.sync_execute_raw_smartapp_event(
+        response = bot.sync_execute_raw_smartapp_event(
             await request.json(),
             verify_request=False,
         )
@@ -130,18 +130,18 @@ async def sync_smartapp_event_handler(
 
 
 @router.get("/status")
-async def status_handler(request: Request, bot: Bot = bot_dependency) -> JSONResponse:
-    status = await bot.raw_get_status(dict(request.query_params), verify_request=False)
+def status_handler(request: Request, bot: Bot = bot_dependency) -> JSONResponse:
+    status = bot.raw_get_status(dict(request.query_params), verify_request=False)
     return JSONResponse(status)
 
 
 @router.get("/status__unverified_request")
-async def status_handler__unverified_request(
+def status_handler__unverified_request(
     request: Request,
     bot: Bot = bot_dependency,
 ) -> JSONResponse:
     try:
-        status = await bot.raw_get_status(
+        status = bot.raw_get_status(
             dict(request.query_params),
             request_headers=request.headers,
         )
@@ -160,7 +160,7 @@ async def callback_handler(
     request: Request,
     bot: Bot = bot_dependency,
 ) -> JSONResponse:
-    await bot.set_raw_botx_method_result(await request.json(), verify_request=False)
+    bot.set_raw_botx_method_result(await request.json(), verify_request=False)
     return JSONResponse(
         build_command_accepted_response(),
         status_code=HTTPStatus.ACCEPTED,
@@ -486,7 +486,7 @@ def test__web_app__sync_smartapp_event__error(
     local_collector = HandlerCollector()
 
     @local_collector.sync_smartapp_event
-    async def handle_sync_smartapp_event_with_error(
+    def handle_sync_smartapp_event_with_error(
         *_: Any,
     ) -> BotAPISyncSmartAppEventErrorResponse:
         return BotAPISyncSmartAppEventErrorResponse.from_domain(

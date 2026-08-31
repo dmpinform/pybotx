@@ -1,7 +1,7 @@
+from collections.abc import Callable
 from datetime import datetime
 from http import HTTPStatus
 from typing import Any
-from collections.abc import Callable
 from uuid import UUID
 
 import pytest
@@ -10,9 +10,7 @@ from respx.router import MockRouter
 from pybotx import ChatListItem, ChatTypes
 from tests.testkit import BotXRequest, assert_deep_equal, mock_botx, ok_payload
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
@@ -24,7 +22,7 @@ REQUEST = BotXRequest(
 )
 
 
-async def test__list_chats__succeed(
+def test__list_chats__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -57,8 +55,8 @@ async def test__list_chats__succeed(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        chats = await bot.list_chats(bot_id=bot_id)
+    with bot_factory() as bot:
+        chats = bot.list_chats(bot_id=bot_id)
 
     # - Assert -
     assert_deep_equal(
@@ -82,7 +80,7 @@ async def test__list_chats__succeed(
     assert endpoint.called
 
 
-async def test__list_chats__unsupported_chats_types(
+def test__list_chats__unsupported_chats_types(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -129,8 +127,8 @@ async def test__list_chats__unsupported_chats_types(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        chats = await bot.list_chats(bot_id=bot_id)
+    with bot_factory() as bot:
+        chats = bot.list_chats(bot_id=bot_id)
 
     # - Assert -
     assert "One or more unsupported chat types skipped" in loguru_caplog.text

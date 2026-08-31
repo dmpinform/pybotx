@@ -1,12 +1,12 @@
-import asyncio
+import contextvars
 import re
+import threading
+from collections.abc import Callable, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
     overload,
 )
-from collections.abc import Callable, Sequence
-from weakref import WeakSet
 
 from pybotx.bot.contextvars import bot_id_var, bot_var, chat_id_var
 from pybotx.bot.handler import (
@@ -74,26 +74,29 @@ class HandlerCollector:
             SyncSmartAppEventHandlerFunc,
         ] = {}
         self._middlewares = optional_sequence_to_list(middlewares)
-        self._tasks: WeakSet[asyncio.Task[None]] = WeakSet()
+        self._threads: list[threading.Thread] = []
 
     def include(self, *others: "HandlerCollector") -> None:
         """Include other `HandlerCollector`."""
         for collector in others:
             self._include_collector(collector)
 
-    def async_handle_bot_command(
+    def spawn_handler_thread(
         self,
         bot: "Bot",
         bot_command: BotCommand,
-    ) -> "asyncio.Task[None]":
-        task = asyncio.create_task(
-            self.handle_bot_command(bot_command, bot),
+    ) -> threading.Thread:
+        thread = threading.Thread(
+            target=self.handle_bot_command,
+            args=(bot_command, bot),
+            daemon=True,
         )
-        self._tasks.add(task)
+        self._threads.append(thread)
+        thread.start()
 
-        return task
+        return thread
 
-    async def handle_incoming_message_by_command(
+    def handle_incoming_message_by_command(
         self,
         message: IncomingMessage,
         bot: "Bot",
@@ -101,29 +104,46 @@ class HandlerCollector:
     ) -> None:
         message_handler = self._get_command_handler(command)
         if message_handler:
-            self._fill_contextvars(message, bot)
-            await message_handler(message, bot)
 
-    async def handle_bot_command(self, bot_command: BotCommand, bot: "Bot") -> None:
-        if isinstance(bot_command, IncomingMessage):
-            message_handler = self._get_incoming_message_handler(bot_command)
-            if message_handler:
-                self._fill_contextvars(bot_command, bot)
-                await message_handler(bot_command, bot)
+            def run_handler() -> None:
+                self._fill_contextvars(message, bot)
+                message_handler(message, bot)
 
-        elif isinstance(
-            bot_command,
-            SystemEvent.__args__,
-        ):
-            event_handler = self._get_system_event_handler_or_none(bot_command)
-            if event_handler:
-                self._fill_contextvars(bot_command, bot)
-                await event_handler(bot_command, bot)
+            # Handler runs in a copied context so contextvars don't leak
+            # into the caller's thread (which is usually long-lived).
+            contextvars.copy_context().run(run_handler)
 
-        else:
-            raise NotImplementedError(f"Unsupported event type: `{bot_command}`")
+    def handle_bot_command(self, bot_command: BotCommand, bot: "Bot") -> None:
+        try:
+            if isinstance(bot_command, IncomingMessage):
+                message_handler = self._get_incoming_message_handler(bot_command)
+                if message_handler:
 
-    async def handle_sync_smartapp_event(
+                    def run_handler() -> None:
+                        self._fill_contextvars(bot_command, bot)
+                        message_handler(bot_command, bot)
+
+                    contextvars.copy_context().run(run_handler)
+
+            elif isinstance(
+                bot_command,
+                SystemEvent.__args__,
+            ):
+                event_handler = self._get_system_event_handler_or_none(bot_command)
+                if event_handler:
+
+                    def run_handler() -> None:
+                        self._fill_contextvars(bot_command, bot)
+                        event_handler(bot_command, bot)
+
+                    contextvars.copy_context().run(run_handler)
+
+            else:
+                raise NotImplementedError(f"Unsupported event type: `{bot_command}`")
+        except Exception:
+            logger.exception("Exception during bot command handling:")
+
+    def handle_sync_smartapp_event(
         self,
         bot: "Bot",
         smartapp_event: SmartAppEvent,
@@ -140,10 +160,15 @@ class HandlerCollector:
                 "Handler for sync smartapp event not found",
             )
 
-        self._fill_contextvars(smartapp_event, bot)
-        return await event_handler(smartapp_event, bot)
+        def run_handler() -> BotAPISyncSmartAppEventResponse:
+            self._fill_contextvars(smartapp_event, bot)
+            return event_handler(smartapp_event, bot)
 
-    async def get_bot_menu(
+        # Handler runs in a copied context so contextvars don't leak
+        # into the caller's thread (which is usually long-lived).
+        return contextvars.copy_context().run(run_handler)
+
+    def get_bot_menu(
         self,
         status_recipient: StatusRecipient,
         bot: "Bot",
@@ -153,7 +178,7 @@ class HandlerCollector:
         for command_name, handler in self._user_commands_handlers.items():
             if handler.visible is True or (
                 callable(handler.visible)
-                and await handler.visible(status_recipient, bot)
+                and handler.visible(status_recipient, bot)
             ):
                 bot_menu[command_name] = handler.description
 
@@ -362,12 +387,10 @@ class HandlerCollector:
         exception_middleware = ExceptionMiddleware(exception_handlers or {})
         self._middlewares.insert(0, exception_middleware.dispatch)
 
-    async def wait_active_tasks(self) -> None:
-        if self._tasks:
-            await asyncio.wait(
-                self._tasks,
-                return_when=asyncio.ALL_COMPLETED,
-            )
+    def wait_active_tasks(self) -> None:
+        for thread in self._threads:
+            if thread.is_alive():
+                thread.join()
 
     def _include_collector(self, other: "HandlerCollector") -> None:
         # - Message handlers -

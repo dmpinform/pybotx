@@ -10,14 +10,12 @@ from pybotx.models.enums import SyncSourceTypes, UserKinds
 from pybotx.models.users import UserFromCSV
 from tests.testkit import BotXRequest, assert_deep_equal, error_payload, mock_botx
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__users_as_csv__no_user_kind_selected_error(
+def test__users_as_csv__no_user_kind_selected_error(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -37,22 +35,21 @@ async def test__users_as_csv__no_user_kind_selected_error(
     )
 
     # - Act -
-    with pytest.raises(NoUserKindSelectedError) as exc:
-        async with bot_factory() as bot:
-            async with bot.users_as_csv(
-                bot_id=bot_id,
-                cts_user=False,
-                unregistered=False,
-                botx=False,
-            ):
-                pass
+    with pytest.raises(NoUserKindSelectedError) as exc, bot_factory() as bot:
+        with bot.users_as_csv(
+            bot_id=bot_id,
+            cts_user=False,
+            unregistered=False,
+            botx=False,
+        ):
+            pass
 
     # - Assert -
     assert endpoint.called
     assert "no_user_kind_selected" in str(exc.value)
 
 
-async def test__users_as_csv__succeed(
+def test__users_as_csv__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -78,10 +75,9 @@ async def test__users_as_csv__succeed(
     users_from_csv = []
 
     # - Act -
-    async with bot_factory() as bot:
-        async with bot.users_as_csv(bot_id=bot_id) as users:
-            async for user in users:
-                users_from_csv.append(user)
+    with bot_factory() as bot, bot.users_as_csv(bot_id=bot_id) as users:
+        for user in users:
+            users_from_csv.append(user)
 
     # - Assert -
     assert endpoint.called
@@ -140,7 +136,7 @@ async def test__users_as_csv__succeed(
     )
 
 
-async def test__users_as_csv_with_documented_columns_only__succeed(
+def test__users_as_csv_with_documented_columns_only__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -165,10 +161,9 @@ async def test__users_as_csv_with_documented_columns_only__succeed(
 
     users_from_csv = []
 
-    async with bot_factory() as bot:
-        async with bot.users_as_csv(bot_id=bot_id) as users:
-            async for user in users:
-                users_from_csv.append(user)
+    with bot_factory() as bot, bot.users_as_csv(bot_id=bot_id) as users:
+        for user in users:
+            users_from_csv.append(user)
 
     assert endpoint.called
     assert_deep_equal(

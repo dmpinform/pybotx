@@ -45,14 +45,14 @@ class GetConferenceMethod(AuthorizedBotXMethod):
         404: response_exception_thrower(ConferenceNotFoundError),
     }
 
-    async def execute(
+    def execute(
         self,
         payload: BotXAPIGetConferenceRequestPayload,
     ) -> BotXAPIGetConferenceResponsePayload:
         jsonable_dict = payload.jsonable_dict()
         path = f"/api/v3/botx/voex/conferences/{jsonable_dict['call_id']}"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "GET",
             self._build_url(path),
         )

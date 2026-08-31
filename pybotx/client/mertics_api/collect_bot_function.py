@@ -26,13 +26,13 @@ class BotXAPICollectBotFunctionResponsePayload(VerifiedPayloadBaseModel):
 
 
 class CollectBotFunctionMethod(AuthorizedBotXMethod):
-    async def execute(
+    def execute(
         self,
         payload: BotXAPICollectBotFunctionRequestPayload,
     ) -> None:
         path = "/api/v3/botx/metrics/bot_function"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "POST",
             self._build_url(path),
             json=payload.jsonable_dict(),

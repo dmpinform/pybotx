@@ -1,23 +1,25 @@
 import logging
 import socket
+from collections.abc import Callable, Generator, Iterator
+from contextlib import AbstractContextManager, contextmanager
 from datetime import datetime
 from http import HTTPStatus
-from typing import Any
-from contextlib import AbstractAsyncContextManager
-from collections.abc import AsyncGenerator, Callable, Generator
+from tempfile import NamedTemporaryFile
+from typing import IO, Any
 from unittest.mock import Mock
 from uuid import UUID, uuid4
 
 import httpx
 import jwt
 import pytest
-from aiofiles.tempfile import NamedTemporaryFile
+from pydantic import BaseModel
 from respx.router import MockRouter
 
 from pybotx import (
     Bot,
     BotAccount,
     BotAccountWithSecret,
+    BotXAuthVersion,
     Chat,
     ChatTypes,
     HandlerCollector,
@@ -25,15 +27,11 @@ from pybotx import (
     SmartAppEvent,
     UserDevice,
     UserSender,
-    BotXAuthVersion,
     lifespan_wrapper,
 )
 from pybotx.bot.bot_accounts_storage import BotAccountsStorage
 from pybotx.logger import logger
 from pybotx.models.sync_smartapp_event import BotAPISyncSmartAppEventResultResponse
-from pydantic import BaseModel
-from contextlib import asynccontextmanager
-
 from tests.fixtures.users_api import (  # noqa: F401
     user_from_search_with_data,
     user_from_search_with_data_json,
@@ -201,16 +199,16 @@ def mock_authorization(
 @pytest.fixture
 def bot_factory(
     bot_account: BotAccountWithSecret,
-) -> Callable[..., AbstractAsyncContextManager[Bot]]:
-    @asynccontextmanager
-    async def factory(
+) -> Callable[..., AbstractContextManager[Bot]]:
+    @contextmanager
+    def factory(
         *,
         collectors: list[HandlerCollector] | None = None,
         **kwargs: Any,
-    ) -> AsyncGenerator[Bot, None]:
+    ) -> Iterator[Bot]:
         collectors = collectors or [HandlerCollector()]
         bot = Bot(collectors=collectors, bot_accounts=[bot_account], **kwargs)
-        async with lifespan_wrapper(bot) as running_bot:
+        with lifespan_wrapper(bot) as running_bot:
             yield running_bot
 
     return factory
@@ -239,15 +237,15 @@ def loguru_caplog(
 
 
 @pytest.fixture
-async def httpx_client() -> AsyncGenerator[httpx.AsyncClient, None]:
-    async with httpx.AsyncClient() as client:
+def httpx_client() -> Generator[httpx.Client, None, None]:
+    with httpx.Client() as client:
         yield client
 
 
 @pytest.fixture
-async def async_buffer() -> AsyncGenerator[NamedTemporaryFile, None]:
-    async with NamedTemporaryFile("wb+") as async_buffer:
-        yield async_buffer
+def buffer() -> Generator[IO[bytes], None, None]:
+    with NamedTemporaryFile("wb+") as buffer:
+        yield buffer
 
 
 @pytest.fixture
@@ -425,7 +423,7 @@ def collector_with_sync_smartapp_event_handler() -> HandlerCollector:
     collector = HandlerCollector()
 
     @collector.sync_smartapp_event
-    async def handle_sync_smartapp_event(
+    def handle_sync_smartapp_event(
         event: SmartAppEvent,
         _: Bot,
     ) -> BotAPISyncSmartAppEventResultResponse:

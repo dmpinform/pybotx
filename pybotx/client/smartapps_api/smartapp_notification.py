@@ -39,7 +39,7 @@ class BotXAPISmartAppNotificationResponsePayload(VerifiedPayloadBaseModel):
 
 
 class SmartAppNotificationMethod(AuthorizedBotXMethod):
-    async def execute(
+    def execute(
         self,
         payload: BotXAPISmartAppNotificationRequestPayload,
     ) -> None:
@@ -50,7 +50,7 @@ class SmartAppNotificationMethod(AuthorizedBotXMethod):
         json = payload.jsonable_dict()
         json["opts"] = json.get("opts", {})
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "POST",
             self._build_url(path),
             json=json,

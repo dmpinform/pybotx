@@ -4,20 +4,20 @@ from uuid import UUID
 
 from pybotx.missing import Missing, Undefined
 from pybotx.models.api_base import UnverifiedPayloadBaseModel, VerifiedPayloadBaseModel
-from pybotx.models.async_files import (
+from pybotx.models.bot_account import BotAccount
+from pybotx.models.chats import Chat
+from pybotx.models.enums import (
+    BotAPIClientNetworkContours,
+    BotAPIClientPlatforms,
+    ChatTypes,
+    convert_client_network_contour_to_domain,
+    convert_client_platform_to_domain,
+)
+from pybotx.models.files import (
     APIAsyncFile,
     File,
     convert_async_file_from_domain,
     convert_async_file_to_domain,
-)
-from pybotx.models.bot_account import BotAccount
-from pybotx.models.chats import Chat
-from pybotx.models.enums import (
-    BotAPIClientPlatforms,
-    BotAPIClientNetworkContours,
-    ChatTypes,
-    convert_client_network_contour_to_domain,
-    convert_client_platform_to_domain,
 )
 from pybotx.models.message.incoming_message import UserDevice, UserSender
 from pybotx.models.system_events.smartapp_event import SmartAppEvent

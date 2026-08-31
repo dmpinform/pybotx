@@ -3,16 +3,14 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-
 import pybotx.client.chats_api.personal_chat as personal_chat_module
 from pybotx.client.chats_api.personal_chat import (
-    BotXAPIPersonalChatRequestPayload,
-    BotXAPIPersonalChatResult,
     BotXAPIPersonalChatMember,
+    BotXAPIPersonalChatRequestPayload,
     BotXAPIPersonalChatResponsePayload,
+    BotXAPIPersonalChatResult,
 )
-from pybotx.models.enums import APIUserKinds, APIChatTypes
-from pybotx.models.enums import ChatTypes
+from pybotx.models.enums import APIChatTypes, APIUserKinds, ChatTypes
 
 
 def test_request_payload_as_query_params_returns_string_uuid() -> None:

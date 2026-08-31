@@ -1,14 +1,14 @@
-from contextlib import asynccontextmanager
-from collections.abc import AsyncGenerator
+from collections.abc import Iterator
+from contextlib import contextmanager
 
 from pybotx.bot.bot import Bot
 
 
-@asynccontextmanager
-async def lifespan_wrapper(bot: Bot) -> AsyncGenerator[Bot, None]:
-    await bot.startup()
+@contextmanager
+def lifespan_wrapper(bot: Bot) -> Iterator[Bot]:
+    bot.startup()
 
     try:
         yield bot
     finally:
-        await bot.shutdown()
+        bot.shutdown()

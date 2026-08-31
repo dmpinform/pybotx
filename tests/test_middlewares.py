@@ -13,14 +13,12 @@ from pybotx import (
     lifespan_wrapper,
 )
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__middlewares__correct_order(
+def test__middlewares__correct_order(
     incoming_message_factory: Callable[..., IncomingMessage],
     correct_handler_trigger: Mock,
     bot_account: BotAccountWithSecret,
@@ -30,14 +28,14 @@ async def test__middlewares__correct_order(
     user_command = incoming_message_factory(body="/command")
 
     def middleware_factory(number: int) -> Middleware:
-        async def middleware(
+        def middleware(
             message: IncomingMessage,
             bot: Bot,
             call_next: IncomingMessageHandlerFunc,
         ) -> None:
             middlewares_called_order.append(number)
 
-            await call_next(message, bot)
+            call_next(message, bot)
 
         return middleware
 
@@ -50,7 +48,7 @@ async def test__middlewares__correct_order(
         description="My command",
         middlewares=[middleware_factory(5), middleware_factory(6)],
     )
-    async def handler(message: IncomingMessage, bot: Bot) -> None:
+    def handler(message: IncomingMessage, bot: Bot) -> None:
         correct_handler_trigger()
 
     built_bot = Bot(
@@ -60,8 +58,8 @@ async def test__middlewares__correct_order(
     )
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_bot_command(user_command)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_bot_command(user_command)
 
     # - Assert -
     correct_handler_trigger.assert_called_once()
@@ -69,7 +67,7 @@ async def test__middlewares__correct_order(
     assert middlewares_called_order == [1, 2, 3, 4, 5, 6]
 
 
-async def test__middlewares__called_in_default_handler(
+def test__middlewares__called_in_default_handler(
     incoming_message_factory: Callable[..., IncomingMessage],
     bot_account: BotAccountWithSecret,
 ) -> None:
@@ -78,14 +76,14 @@ async def test__middlewares__called_in_default_handler(
     user_command = incoming_message_factory(body="/command")
 
     def middleware_factory(number: int) -> Middleware:
-        async def middleware(
+        def middleware(
             message: IncomingMessage,
             bot: Bot,
             call_next: IncomingMessageHandlerFunc,
         ) -> None:
             middlewares_called_order.append(number)
 
-            await call_next(message, bot)
+            call_next(message, bot)
 
         return middleware
 
@@ -96,7 +94,7 @@ async def test__middlewares__called_in_default_handler(
     @collector.default_message_handler(
         middlewares=[middleware_factory(5), middleware_factory(6)],
     )
-    async def default_handler(message: IncomingMessage, bot: Bot) -> None:
+    def default_handler(message: IncomingMessage, bot: Bot) -> None:
         pass
 
     built_bot = Bot(
@@ -106,14 +104,14 @@ async def test__middlewares__called_in_default_handler(
     )
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_bot_command(user_command)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_bot_command(user_command)
 
     # - Assert -
     assert middlewares_called_order == [1, 2, 3, 4, 5, 6]
 
 
-async def test__middlewares__correct_child_collector_middlewares(
+def test__middlewares__correct_child_collector_middlewares(
     incoming_message_factory: Callable[..., IncomingMessage],
     bot_account: BotAccountWithSecret,
 ) -> None:
@@ -122,14 +120,14 @@ async def test__middlewares__correct_child_collector_middlewares(
     user_command = incoming_message_factory(body="/command")
 
     def middleware_factory(number: int) -> Middleware:
-        async def middleware(
+        def middleware(
             message: IncomingMessage,
             bot: Bot,
             call_next: IncomingMessageHandlerFunc,
         ) -> None:
             middlewares_called_order.append(number)
 
-            await call_next(message, bot)
+            call_next(message, bot)
 
         return middleware
 
@@ -138,7 +136,7 @@ async def test__middlewares__correct_child_collector_middlewares(
     )
 
     @collector_1.command("/other-command", description="My command")
-    async def handler_1(message: IncomingMessage, bot: Bot) -> None:
+    def handler_1(message: IncomingMessage, bot: Bot) -> None:
         pass
 
     collector_2 = HandlerCollector(
@@ -146,21 +144,21 @@ async def test__middlewares__correct_child_collector_middlewares(
     )
 
     @collector_2.command("/command", description="My command")
-    async def handler_2(message: IncomingMessage, bot: Bot) -> None:
+    def handler_2(message: IncomingMessage, bot: Bot) -> None:
         pass
 
     collector_1.include(collector_2)
     built_bot = Bot(collectors=[collector_1], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_bot_command(user_command)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_bot_command(user_command)
 
     # - Assert -
     assert middlewares_called_order == [1, 2, 3, 4]
 
 
-async def test__middlewares__correct_parent_collector_middlewares(
+def test__middlewares__correct_parent_collector_middlewares(
     incoming_message_factory: Callable[..., IncomingMessage],
     bot_account: BotAccountWithSecret,
 ) -> None:
@@ -169,7 +167,7 @@ async def test__middlewares__correct_parent_collector_middlewares(
     user_command = incoming_message_factory(body="/command")
 
     def middleware_factory(number: int) -> Middleware:
-        async def middleware(
+        def middleware(
             message: IncomingMessage,
             bot: Bot,
             call_next: IncomingMessageHandlerFunc,
@@ -177,7 +175,7 @@ async def test__middlewares__correct_parent_collector_middlewares(
             nonlocal middlewares_called_order
             middlewares_called_order.append(number)
 
-            await call_next(message, bot)
+            call_next(message, bot)
 
         return middleware
 
@@ -186,7 +184,7 @@ async def test__middlewares__correct_parent_collector_middlewares(
     )
 
     @collector_1.command("/command", description="My command")
-    async def handler_1(message: IncomingMessage, bot: Bot) -> None:
+    def handler_1(message: IncomingMessage, bot: Bot) -> None:
         pass
 
     collector_2 = HandlerCollector(
@@ -194,15 +192,15 @@ async def test__middlewares__correct_parent_collector_middlewares(
     )
 
     @collector_2.command("/other-command", description="My command")
-    async def handler_2(message: IncomingMessage, bot: Bot) -> None:
+    def handler_2(message: IncomingMessage, bot: Bot) -> None:
         pass
 
     collector_1.include(collector_2)
     built_bot = Bot(collectors=[collector_1], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_bot_command(user_command)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_bot_command(user_command)
 
     # - Assert -
     assert middlewares_called_order == [1, 2]

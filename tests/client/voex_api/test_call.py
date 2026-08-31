@@ -14,14 +14,12 @@ from pybotx import (
 from pybotx.client.voex_api.exceptions import CallNotFoundError
 from pybotx.models.call import Call
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__get_call__succeed(
+def test__get_call__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -54,8 +52,8 @@ async def test__get_call__succeed(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        call = await bot.get_call(
+    with lifespan_wrapper(built_bot) as bot:
+        call = bot.get_call(
             bot_id=bot_id,
             call_id=UUID(call_id),
         )
@@ -72,7 +70,7 @@ async def test__get_call__succeed(
     assert endpoint.called
 
 
-async def test__get_call__call_not_found(
+def test__get_call__call_not_found(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -101,9 +99,9 @@ async def test__get_call__call_not_found(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
+    with lifespan_wrapper(built_bot) as bot:
         with pytest.raises(CallNotFoundError) as exc:
-            await bot.get_call(
+            bot.get_call(
                 bot_id=bot_id,
                 call_id=UUID(call_id),
             )

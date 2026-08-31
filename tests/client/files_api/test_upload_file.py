@@ -1,9 +1,10 @@
 from http import HTTPStatus
+from tempfile import NamedTemporaryFile
+from typing import IO
 from uuid import UUID
 
 import httpx
 import pytest
-from aiofiles.tempfile import NamedTemporaryFile
 from respx.router import MockRouter
 
 from pybotx import (
@@ -14,23 +15,21 @@ from pybotx import (
     lifespan_wrapper,
 )
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__download_file__chat_not_found_error_raised(
+def test__download_file__chat_not_found_error_raised(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
     bot_account: BotAccountWithSecret,
-    async_buffer: NamedTemporaryFile,
+    buffer: IO[bytes],
 ) -> None:
     # - Arrange -
-    await async_buffer.write(b"Hello, world!\n")
-    await async_buffer.seek(0)
+    buffer.write(b"Hello, world!\n")
+    buffer.seek(0)
 
     endpoint = respx_mock.post(
         f"https://{host}/api/v3/botx/files/upload",
@@ -55,12 +54,12 @@ async def test__download_file__chat_not_found_error_raised(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
+    with lifespan_wrapper(built_bot) as bot:
         with pytest.raises(ChatNotFoundError) as exc:
-            await bot.upload_file(
+            bot.upload_file(
                 bot_id=bot_id,
                 chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
-                async_buffer=async_buffer,
+                buffer=buffer,
                 filename="test.txt",
             )
 
@@ -69,16 +68,16 @@ async def test__download_file__chat_not_found_error_raised(
     assert endpoint.called
 
 
-async def test__download_file__succeed(
+def test__download_file__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
     bot_account: BotAccountWithSecret,
-    async_buffer: NamedTemporaryFile,
+    buffer: IO[bytes],
 ) -> None:
     # - Arrange -
-    await async_buffer.write(b"Hello, world!\n")
-    await async_buffer.seek(0)
+    buffer.write(b"Hello, world!\n")
+    buffer.seek(0)
 
     endpoint = respx_mock.post(
         f"https://{host}/api/v3/botx/files/upload",
@@ -113,11 +112,11 @@ async def test__download_file__succeed(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        uploaded_file = await bot.upload_file(
+    with lifespan_wrapper(built_bot) as bot:
+        uploaded_file = bot.upload_file(
             bot_id=bot_id,
             chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
-            async_buffer=async_buffer,
+            buffer=buffer,
             filename="test.txt",
         )
 

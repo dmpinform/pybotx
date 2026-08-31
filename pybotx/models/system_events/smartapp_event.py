@@ -2,8 +2,9 @@ from dataclasses import dataclass
 from typing import Any, Literal
 from uuid import UUID
 
+from pydantic import Field
+
 from pybotx.models.api_base import VerifiedPayloadBaseModel
-from pybotx.models.async_files import APIAsyncFile, File, convert_async_file_to_domain
 from pybotx.models.base_command import (
     BotAPIBaseCommand,
     BotAPIChatContext,
@@ -19,8 +20,8 @@ from pybotx.models.enums import (
     convert_chat_type_to_domain,
     convert_client_platform_to_domain,
 )
+from pybotx.models.files import APIAsyncFile, File, convert_async_file_to_domain
 from pybotx.models.message.incoming_message import UserDevice, UserSender
-from pydantic import Field
 
 
 @dataclass(slots=True)

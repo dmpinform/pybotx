@@ -59,13 +59,13 @@ class SmartAppsListMethod(AuthorizedBotXMethod):
         **AuthorizedBotXMethod.status_handlers,
     }
 
-    async def execute(
+    def execute(
         self,
         payload: BotXAPISmartAppsListRequestPayload,
     ) -> BotXAPISmartAppsListResponsePayload:
         path = "/api/v3/botx/smartapps/list"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "GET",
             self._build_url(path),
             params=payload.jsonable_dict(),

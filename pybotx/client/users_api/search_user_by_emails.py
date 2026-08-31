@@ -27,13 +27,13 @@ class BotXAPISearchUserByEmailsRequestPayload(UnverifiedPayloadBaseModel):
 
 
 class SearchUserByEmailsMethod(AuthorizedBotXMethod):
-    async def execute(
+    def execute(
         self,
         payload: BotXAPISearchUserByEmailsRequestPayload,
     ) -> BotXAPISearchUserByEmailsResponsePayload:
         path = "/api/v3/botx/users/by_email"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "POST",
             self._build_url(path),
             json=payload.jsonable_dict(),

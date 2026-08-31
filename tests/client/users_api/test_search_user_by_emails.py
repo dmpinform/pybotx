@@ -8,14 +8,12 @@ from respx.router import MockRouter
 from pybotx import UserFromSearch
 from tests.testkit import BotXRequest, assert_deep_equal, mock_botx, ok_payload
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__search_user_by_email__succeed(
+def test__search_user_by_email__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -40,8 +38,8 @@ async def test__search_user_by_email__succeed(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        users = await bot.search_user_by_emails(
+    with bot_factory() as bot:
+        users = bot.search_user_by_emails(
             bot_id=bot_id,
             emails=user_emails,
         )
@@ -51,7 +49,7 @@ async def test__search_user_by_email__succeed(
     assert endpoint.called
 
 
-async def test__search_user_by_email_without_data__succeed(
+def test__search_user_by_email_without_data__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -76,8 +74,8 @@ async def test__search_user_by_email_without_data__succeed(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        users = await bot.search_user_by_emails(
+    with bot_factory() as bot:
+        users = bot.search_user_by_emails(
             bot_id=bot_id,
             emails=user_emails,
         )
@@ -87,7 +85,7 @@ async def test__search_user_by_email_without_data__succeed(
     assert endpoint.called
 
 
-async def test__search_user_by_email_with_trusts_search__succeed(
+def test__search_user_by_email_with_trusts_search__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -116,8 +114,8 @@ async def test__search_user_by_email_with_trusts_search__succeed(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        users = await bot.search_user_by_emails(
+    with bot_factory() as bot:
+        users = bot.search_user_by_emails(
             bot_id=bot_id,
             emails=user_emails,
             trusts_search=True,

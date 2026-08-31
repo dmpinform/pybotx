@@ -16,9 +16,7 @@ from pybotx import (
 )
 from pybotx.client.users_api.search_user_by_email import SearchUserByEmailMethod
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
@@ -28,7 +26,7 @@ def reset_search_user_by_email_deprecation() -> None:
     SearchUserByEmailMethod._legacy_get_warned = False
 
 
-async def test__search_user_by_email__user_not_found_error_raised(
+def test__search_user_by_email__user_not_found_error_raised(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -54,20 +52,19 @@ async def test__search_user_by_email__user_not_found_error_raised(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        with pytest.warns(DeprecationWarning):
-            with pytest.raises(UserNotFoundError) as exc:
-                await bot.search_user_by_email(
-                    bot_id=bot_id,
-                    email="ad_user@cts.com",
-                )
+    with lifespan_wrapper(built_bot) as bot, pytest.warns(DeprecationWarning):
+        with pytest.raises(UserNotFoundError) as exc:
+            bot.search_user_by_email(
+                bot_id=bot_id,
+                email="ad_user@cts.com",
+            )
 
     # - Assert -
     assert "user_not_found" in str(exc.value)
     assert endpoint.called
 
 
-async def test__search_user_by_email__succeed(
+def test__search_user_by_email__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -93,12 +90,11 @@ async def test__search_user_by_email__succeed(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        with pytest.warns(DeprecationWarning):
-            user = await bot.search_user_by_email(
-                bot_id=bot_id,
-                email="ad_user@cts.com",
-            )
+    with lifespan_wrapper(built_bot) as bot, pytest.warns(DeprecationWarning):
+        user = bot.search_user_by_email(
+            bot_id=bot_id,
+            email="ad_user@cts.com",
+        )
 
     # - Assert -
     assert user == user_from_search_with_data
@@ -106,7 +102,7 @@ async def test__search_user_by_email__succeed(
     assert endpoint.called
 
 
-async def test__search_user_by_email_without_extra_data__succeed(
+def test__search_user_by_email_without_extra_data__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -132,12 +128,11 @@ async def test__search_user_by_email_without_extra_data__succeed(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        with pytest.warns(DeprecationWarning):
-            user = await bot.search_user_by_email(
-                bot_id=bot_id,
-                email="ad_user@cts.com",
-            )
+    with lifespan_wrapper(built_bot) as bot, pytest.warns(DeprecationWarning):
+        user = bot.search_user_by_email(
+            bot_id=bot_id,
+            email="ad_user@cts.com",
+        )
 
     # - Assert -
     assert user == user_from_search_without_data
@@ -145,7 +140,7 @@ async def test__search_user_by_email_without_extra_data__succeed(
     assert endpoint.called
 
 
-async def test__search_user_by_email__legacy_warning_suppressed(
+def test__search_user_by_email__legacy_warning_suppressed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -172,8 +167,8 @@ async def test__search_user_by_email__legacy_warning_suppressed(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        user = await bot.search_user_by_email(
+    with lifespan_wrapper(built_bot) as bot:
+        user = bot.search_user_by_email(
             bot_id=bot_id,
             email="ad_user@cts.com",
         )

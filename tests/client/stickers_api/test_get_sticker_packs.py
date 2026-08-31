@@ -8,14 +8,12 @@ from respx.router import MockRouter
 from pybotx import Bot, BotAccountWithSecret, HandlerCollector, lifespan_wrapper
 from pybotx.models.stickers import StickerPackFromList
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__iterate_by_sticker_packs__succeed(
+def test__iterate_by_sticker_packs__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -59,12 +57,12 @@ async def test__iterate_by_sticker_packs__succeed(
     sticker_pack_list = []
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
+    with lifespan_wrapper(built_bot) as bot:
         sticker_pack_pages = bot.iterate_by_sticker_packs(
             bot_id=bot_id,
             user_huid=UUID("d881f83a-db30-4cff-b60e-f24ac53deecf"),
         )
-        async for sticker_packs in sticker_pack_pages:
+        for sticker_packs in sticker_pack_pages:
             sticker_pack_list.append(sticker_packs)
 
     # - Assert -
@@ -83,7 +81,7 @@ async def test__iterate_by_sticker_packs__succeed(
     assert endpoint.called
 
 
-async def test__iterate_by_sticker_packs__iterate_by_pages_succeed(
+def test__iterate_by_sticker_packs__iterate_by_pages_succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -184,12 +182,12 @@ async def test__iterate_by_sticker_packs__iterate_by_pages_succeed(
     sticker_pack_list = []
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
+    with lifespan_wrapper(built_bot) as bot:
         sticker_pack_pages = bot.iterate_by_sticker_packs(
             bot_id=bot_id,
             user_huid=UUID("d881f83a-db30-4cff-b60e-f24ac53deecf"),
         )
-        async for sticker_packs in sticker_pack_pages:
+        for sticker_packs in sticker_pack_pages:
             sticker_pack_list.append(sticker_packs)
 
     # - Assert -

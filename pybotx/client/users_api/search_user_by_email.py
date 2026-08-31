@@ -39,7 +39,7 @@ class SearchUserByEmailMethod(AuthorizedBotXMethod):
     }
     _legacy_get_warned: bool = False
 
-    async def execute(
+    def execute(
         self,
         payload: BotXAPISearchUserByEmailRequestPayload,
     ) -> BotXAPISearchUserResponsePayload:
@@ -54,7 +54,7 @@ class SearchUserByEmailMethod(AuthorizedBotXMethod):
 
         path = "/api/v3/botx/users/by_email"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "GET",
             self._build_url(path),
             params=payload.jsonable_dict(),
@@ -72,7 +72,7 @@ class SearchUserByEmailPostMethod(AuthorizedBotXMethod):
         404: response_exception_thrower(UserNotFoundError),
     }
 
-    async def execute(
+    def execute(
         self,
         payload: BotXAPISearchUserByEmailRequestPayload,
     ) -> BotXAPISearchUserResponsePayload:
@@ -88,7 +88,7 @@ class SearchUserByEmailPostMethod(AuthorizedBotXMethod):
             key: value for key, value in request_json.items() if value is not Undefined
         }
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "POST",
             self._build_url(path),
             json=request_json,

@@ -4,7 +4,7 @@ from typing import Literal, overload
 
 class AutoName(Enum):
     def _generate_next_value_(  # type: ignore
-        name,  # noqa: N805 (copied from official python docs)
+        name,
         start,
         count,
         last_values,

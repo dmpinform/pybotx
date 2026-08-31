@@ -1,6 +1,6 @@
+from collections.abc import Sequence
 from http import HTTPStatus
 from typing import Any
-from collections.abc import Sequence
 from uuid import UUID
 
 import pytest
@@ -29,7 +29,6 @@ REQUEST_BASE = BotXRequest(
 )
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("response_status", "response_json", "expected_exc", "expected_fragments"),
     [
@@ -56,7 +55,7 @@ REQUEST_BASE = BotXRequest(
         ),
     ],
 )
-async def test__create_chat__error_response(
+def test__create_chat__error_response(
     response_status: int,
     response_json: dict[str, Any],
     expected_exc: type[Exception],
@@ -70,14 +69,13 @@ async def test__create_chat__error_response(
     endpoint = mock_botx(respx_mock, host, REQUEST_BASE, response_json, response_status)
 
     # - Act -
-    async with bot_factory() as bot:
-        with pytest.raises(expected_exc) as exc:
-            await bot.create_chat(
-                bot_id=bot_id,
-                name="Test chat name",
-                chat_type=ChatTypes.GROUP_CHAT,
-                huids=[],
-            )
+    with bot_factory() as bot, pytest.raises(expected_exc) as exc:
+        bot.create_chat(
+            bot_id=bot_id,
+            name="Test chat name",
+            chat_type=ChatTypes.GROUP_CHAT,
+            huids=[],
+        )
 
     # - Assert -
     for fragment in expected_fragments:
@@ -85,8 +83,7 @@ async def test__create_chat__error_response(
     assert endpoint.called
 
 
-@pytest.mark.asyncio
-async def test__create_chat__maximum_filled_succeed(
+def test__create_chat__maximum_filled_succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -114,8 +111,8 @@ async def test__create_chat__maximum_filled_succeed(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        created_chat_id = await bot.create_chat(
+    with bot_factory() as bot:
+        created_chat_id = bot.create_chat(
             bot_id=bot_id,
             name="Test chat name",
             chat_type=ChatTypes.GROUP_CHAT,
@@ -129,8 +126,7 @@ async def test__create_chat__maximum_filled_succeed(
     assert endpoint.called
 
 
-@pytest.mark.asyncio
-async def test__create_chat__with_valid_avatar_succeed(
+def test__create_chat__with_valid_avatar_succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -159,8 +155,8 @@ async def test__create_chat__with_valid_avatar_succeed(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        created_chat_id = await bot.create_chat(
+    with bot_factory() as bot:
+        created_chat_id = bot.create_chat(
             bot_id=bot_id,
             name="Test chat name",
             chat_type=ChatTypes.GROUP_CHAT,
@@ -213,7 +209,7 @@ def test__create_chat_payload__avatar_validator_with_valid_data_url() -> None:
 def test__create_chat_payload__convert_chat_type_validator() -> None:
     """Test that BotXAPICreateChatRequestPayload converts ChatTypes to APIChatTypes."""
     from pybotx.client.chats_api.create_chat import BotXAPICreateChatRequestPayload
-    from pybotx.models.enums import ChatTypes, APIChatTypes
+    from pybotx.models.enums import APIChatTypes, ChatTypes
 
     # Test with ChatTypes enum
     values = {"chat_type": ChatTypes.GROUP_CHAT}
@@ -239,8 +235,8 @@ def test__create_chat_payload__convert_chat_type_validator() -> None:
 def test__create_chat_payload__serialize_chat_type_from_domain() -> None:
     """Test that chat_type serialization converts ChatTypes to API value."""
     from pybotx.client.chats_api.create_chat import BotXAPICreateChatRequestPayload
-    from pybotx.models.enums import ChatTypes, APIChatTypes
     from pybotx.missing import Undefined
+    from pybotx.models.enums import APIChatTypes, ChatTypes
 
     payload = BotXAPICreateChatRequestPayload(
         name="Test chat name",

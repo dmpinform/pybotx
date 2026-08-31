@@ -13,14 +13,12 @@ from pybotx import (
     lifespan_wrapper,
 )
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__create_sticker_pack__succeed(
+def test__create_sticker_pack__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -57,8 +55,8 @@ async def test__create_sticker_pack__succeed(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        sticker_pack = await bot.create_sticker_pack(
+    with lifespan_wrapper(built_bot) as bot:
+        sticker_pack = bot.create_sticker_pack(
             bot_id=bot_id,
             name="Sticker Pack",
             huid=UUID("d881f83a-db30-4cff-b60e-f24ac53deecf"),

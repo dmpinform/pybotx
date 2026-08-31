@@ -38,7 +38,7 @@ class SmartAppUnreadCounterMethod(AuthorizedBotXMethod):
         **AuthorizedBotXMethod.error_callback_handlers,
     }
 
-    async def execute(
+    def execute(
         self,
         payload: BotXAPISmartAppUnreadCounterRequestPayload,
         wait_callback: bool,
@@ -47,7 +47,7 @@ class SmartAppUnreadCounterMethod(AuthorizedBotXMethod):
     ) -> BotXAPISmartAppUnreadCounterResponsePayload:
         path = "/api/v4/botx/smartapps/unread_counter"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "POST",
             self._build_url(path),
             json=payload.jsonable_dict(),
@@ -58,7 +58,7 @@ class SmartAppUnreadCounterMethod(AuthorizedBotXMethod):
             response,
         )
 
-        await self._process_callback(
+        self._process_callback(
             api_model.result.sync_id,
             wait_callback,
             callback_timeout,

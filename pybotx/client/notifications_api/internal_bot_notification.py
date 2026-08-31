@@ -66,7 +66,7 @@ class InternalBotNotificationMethod(AuthorizedBotXMethod):
         ),
     }
 
-    async def execute(
+    def execute(
         self,
         payload: BotXAPIInternalBotNotificationRequestPayload,
         wait_callback: bool,
@@ -75,7 +75,7 @@ class InternalBotNotificationMethod(AuthorizedBotXMethod):
     ) -> BotXAPIInternalBotNotificationResponsePayload:
         path = "/api/v4/botx/notifications/internal"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "POST",
             self._build_url(path),
             json=payload.jsonable_dict(),
@@ -85,7 +85,7 @@ class InternalBotNotificationMethod(AuthorizedBotXMethod):
             response,
         )
 
-        await self._process_callback(
+        self._process_callback(
             api_model.result.sync_id,
             wait_callback,
             callback_timeout,

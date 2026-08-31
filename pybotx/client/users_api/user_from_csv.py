@@ -1,5 +1,7 @@
 from uuid import UUID
 
+from pydantic import Field, field_validator
+
 from pybotx.models.api_base import VerifiedPayloadBaseModel
 from pybotx.models.enums import (
     APISyncSourceTypes,
@@ -8,7 +10,6 @@ from pybotx.models.enums import (
     convert_user_kind_to_domain,
 )
 from pybotx.models.users import UserFromCSV
-from pydantic import Field, field_validator
 
 
 class BotXAPIUserFromCSVResult(VerifiedPayloadBaseModel):

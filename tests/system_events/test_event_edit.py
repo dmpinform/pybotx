@@ -15,14 +15,12 @@ from pybotx import (
 )
 from pybotx.models.attachments import AttachmentImage
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__event_edit__succeed(
+def test__event_edit__succeed(
     bot_account: BotAccountWithSecret,
 ) -> None:
     # - Arrange -
@@ -86,7 +84,7 @@ async def test__event_edit__succeed(
     event_edit: EventEdit | None = None
 
     @collector.event_edit
-    async def event_edit_handler(event: EventEdit, _: Bot) -> None:
+    def event_edit_handler(event: EventEdit, _: Bot) -> None:
         nonlocal event_edit
         event_edit = event
         # Drop `raw_command` from asserting
@@ -95,8 +93,8 @@ async def test__event_edit__succeed(
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_raw_bot_command(payload, verify_request=False)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_raw_bot_command(payload, verify_request=False)
 
     # - Assert -
     assert event_edit == EventEdit(

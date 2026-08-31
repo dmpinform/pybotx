@@ -29,13 +29,13 @@ class UnpinMessageMethod(AuthorizedBotXMethod):
         404: response_exception_thrower(ChatNotFoundError),
     }
 
-    async def execute(
+    def execute(
         self,
         payload: BotXAPIUnpinMessageRequestPayload,
     ) -> None:
         path = "/api/v3/botx/chats/unpin_message"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "POST",
             self._build_url(path),
             json=payload.jsonable_dict(),

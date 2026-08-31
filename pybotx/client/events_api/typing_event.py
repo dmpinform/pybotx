@@ -18,10 +18,10 @@ class BotXAPITypingEventResponsePayload(VerifiedPayloadBaseModel):
 
 
 class TypingEventMethod(AuthorizedBotXMethod):
-    async def execute(self, payload: BotXAPITypingEventRequestPayload) -> None:
+    def execute(self, payload: BotXAPITypingEventRequestPayload) -> None:
         path = "/api/v3/botx/events/typing"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "POST",
             self._build_url(path),
             json=payload.jsonable_dict(),

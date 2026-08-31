@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from typing import Literal
 from uuid import UUID, uuid4
 
+from pydantic import Field, field_validator
+
 from pybotx.missing import Missing, Undefined
 from pybotx.models.api_base import UnverifiedPayloadBaseModel, VerifiedPayloadBaseModel
 from pybotx.models.enums import (
@@ -11,7 +13,6 @@ from pybotx.models.enums import (
     MentionTypes,
     convert_mention_type_from_domain,
 )
-from pydantic import Field, field_validator
 
 
 def build_embed_mention(

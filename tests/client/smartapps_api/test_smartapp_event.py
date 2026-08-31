@@ -6,17 +6,15 @@ import pytest
 from respx.router import MockRouter
 
 from pybotx import Bot, BotAccountWithSecret, HandlerCollector, lifespan_wrapper
-from pybotx.models.async_files import Document, Image, Video, Voice
 from pybotx.models.enums import AttachmentTypes
+from pybotx.models.files import Document, Image, Video, Voice
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__send_smartapp_event__miminally_filled_succeed(
+def test__send_smartapp_event__miminally_filled_succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -48,8 +46,8 @@ async def test__send_smartapp_event__miminally_filled_succeed(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        await bot.send_smartapp_event(
+    with lifespan_wrapper(built_bot) as bot:
+        bot.send_smartapp_event(
             bot_id=bot_id,
             chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
             data={"key": "value"},
@@ -61,7 +59,7 @@ async def test__send_smartapp_event__miminally_filled_succeed(
     assert endpoint.called
 
 
-async def test__send_smartapp_event__maximum_filled_succeed(
+def test__send_smartapp_event__maximum_filled_succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -133,8 +131,8 @@ async def test__send_smartapp_event__maximum_filled_succeed(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        await bot.send_smartapp_event(
+    with lifespan_wrapper(built_bot) as bot:
+        bot.send_smartapp_event(
             bot_id=bot_id,
             chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
             ref=UUID("921763b3-77e8-4f37-b97e-20f4517949b8"),

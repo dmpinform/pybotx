@@ -7,14 +7,12 @@ from respx.router import MockRouter
 
 from pybotx import Bot, BotAccountWithSecret, HandlerCollector, lifespan_wrapper
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__stop_typing__succeed(
+def test__stop_typing__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -37,8 +35,8 @@ async def test__stop_typing__succeed(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        await bot.stop_typing(
+    with lifespan_wrapper(built_bot) as bot:
+        bot.stop_typing(
             bot_id=bot_id,
             chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
         )

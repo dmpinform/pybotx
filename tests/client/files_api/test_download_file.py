@@ -1,9 +1,10 @@
 from http import HTTPStatus
+from tempfile import NamedTemporaryFile
+from typing import IO
 from uuid import UUID
 
 import httpx
 import pytest
-from aiofiles.tempfile import NamedTemporaryFile
 from respx.router import MockRouter
 
 from pybotx import (
@@ -17,19 +18,17 @@ from pybotx import (
     lifespan_wrapper,
 )
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__download_file__unexpected_not_found_error_raised(
+def test__download_file__unexpected_not_found_error_raised(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
     bot_account: BotAccountWithSecret,
-    async_buffer: NamedTemporaryFile,
+    buffer: IO[bytes],
 ) -> None:
     # - Arrange -
     endpoint = respx_mock.get(
@@ -58,13 +57,13 @@ async def test__download_file__unexpected_not_found_error_raised(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
+    with lifespan_wrapper(built_bot) as bot:
         with pytest.raises(InvalidBotXStatusCodeError) as exc:
-            await bot.download_file(
+            bot.download_file(
                 bot_id=bot_id,
                 chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
                 file_id=UUID("c3b9def2-b2c8-4732-b61f-99b9b110fa80"),
-                async_buffer=async_buffer,
+                buffer=buffer,
             )
 
     # - Assert -
@@ -72,12 +71,12 @@ async def test__download_file__unexpected_not_found_error_raised(
     assert endpoint.called
 
 
-async def test__download_file__file_metadata_not_found_error_raised(
+def test__download_file__file_metadata_not_found_error_raised(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
     bot_account: BotAccountWithSecret,
-    async_buffer: NamedTemporaryFile,
+    buffer: IO[bytes],
 ) -> None:
     # - Arrange -
     endpoint = respx_mock.get(
@@ -107,13 +106,13 @@ async def test__download_file__file_metadata_not_found_error_raised(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
+    with lifespan_wrapper(built_bot) as bot:
         with pytest.raises(FileMetadataNotFound) as exc:
-            await bot.download_file(
+            bot.download_file(
                 bot_id=bot_id,
                 chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
                 file_id=UUID("c3b9def2-b2c8-4732-b61f-99b9b110fa80"),
-                async_buffer=async_buffer,
+                buffer=buffer,
             )
 
     # - Assert -
@@ -121,12 +120,12 @@ async def test__download_file__file_metadata_not_found_error_raised(
     assert endpoint.called
 
 
-async def test__download_file__file_deleted_error_raised(
+def test__download_file__file_deleted_error_raised(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
     bot_account: BotAccountWithSecret,
-    async_buffer: NamedTemporaryFile,
+    buffer: IO[bytes],
 ) -> None:
     # - Arrange -
     endpoint = respx_mock.get(
@@ -155,26 +154,25 @@ async def test__download_file__file_deleted_error_raised(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        with pytest.raises(FileDeletedError) as exc:
-            await bot.download_file(
-                bot_id=bot_id,
-                chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
-                file_id=UUID("c3b9def2-b2c8-4732-b61f-99b9b110fa80"),
-                async_buffer=async_buffer,
-            )
+    with lifespan_wrapper(built_bot) as bot, pytest.raises(FileDeletedError) as exc:
+        bot.download_file(
+            bot_id=bot_id,
+            chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
+            file_id=UUID("c3b9def2-b2c8-4732-b61f-99b9b110fa80"),
+            buffer=buffer,
+        )
 
     # - Assert -
     assert "file_deleted" in str(exc.value)
     assert endpoint.called
 
 
-async def test__download_file__chat_not_found_error_raised(
+def test__download_file__chat_not_found_error_raised(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
     bot_account: BotAccountWithSecret,
-    async_buffer: NamedTemporaryFile,
+    buffer: IO[bytes],
 ) -> None:
     # - Arrange -
     endpoint = respx_mock.get(
@@ -203,13 +201,13 @@ async def test__download_file__chat_not_found_error_raised(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
+    with lifespan_wrapper(built_bot) as bot:
         with pytest.raises(ChatNotFoundError) as exc:
-            await bot.download_file(
+            bot.download_file(
                 bot_id=bot_id,
                 chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
                 file_id=UUID("c3b9def2-b2c8-4732-b61f-99b9b110fa80"),
-                async_buffer=async_buffer,
+                buffer=buffer,
             )
 
     # - Assert -
@@ -217,12 +215,12 @@ async def test__download_file__chat_not_found_error_raised(
     assert endpoint.called
 
 
-async def test__download_file__succeed(
+def test__download_file__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
     bot_account: BotAccountWithSecret,
-    async_buffer: NamedTemporaryFile,
+    buffer: IO[bytes],
 ) -> None:
     # - Arrange -
     endpoint = respx_mock.get(
@@ -243,14 +241,14 @@ async def test__download_file__succeed(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        await bot.download_file(
+    with lifespan_wrapper(built_bot) as bot:
+        bot.download_file(
             bot_id=bot_id,
             chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
             file_id=UUID("c3b9def2-b2c8-4732-b61f-99b9b110fa80"),
-            async_buffer=async_buffer,
+            buffer=buffer,
         )
 
     # - Assert -
-    assert await async_buffer.read() == b"Hello, world!\n"
+    assert buffer.read() == b"Hello, world!\n"
     assert endpoint.called

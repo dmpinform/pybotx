@@ -61,13 +61,13 @@ class MessageStatusMethod(AuthorizedBotXMethod):
         404: response_exception_thrower(EventNotFoundError),
     }
 
-    async def execute(
+    def execute(
         self,
         payload: BotXAPIMessageStatusRequestPayload,
     ) -> "BotXAPIMessageStatusResponsePayload":
         path = f"/api/v3/botx/events/{payload.sync_id}/status"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "GET",
             self._build_url(path),
         )

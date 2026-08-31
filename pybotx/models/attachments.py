@@ -1,14 +1,13 @@
 import base64
-from contextlib import asynccontextmanager
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
+from tempfile import SpooledTemporaryFile
 from types import MappingProxyType
 from typing import Literal, TypeGuard
-from collections.abc import AsyncGenerator
 from uuid import UUID
 
-from aiofiles.tempfile import SpooledTemporaryFile
-
-from pybotx.async_buffer import AsyncBufferReadable
+from pybotx.buffer import BufferReadable
 from pybotx.constants import CHUNK_SIZE
 from pybotx.models.api_base import UnverifiedPayloadBaseModel, VerifiedPayloadBaseModel
 from pybotx.models.enums import APIAttachmentTypes, AttachmentTypes
@@ -25,11 +24,11 @@ class FileAttachmentBase:
 
     content: bytes
 
-    @asynccontextmanager
-    async def open(self) -> AsyncGenerator[SpooledTemporaryFile, None]:
-        async with SpooledTemporaryFile(max_size=CHUNK_SIZE) as tmp_file:
-            await tmp_file.write(self.content)
-            await tmp_file.seek(0)
+    @contextmanager
+    def open(self) -> Iterator[SpooledTemporaryFile[bytes]]:
+        with SpooledTemporaryFile(max_size=CHUNK_SIZE) as tmp_file:
+            tmp_file.write(self.content)
+            tmp_file.seek(0)
 
             yield tmp_file
 
@@ -94,13 +93,13 @@ class OutgoingAttachment:
     is_async_file: Literal[False] = False
 
     @classmethod
-    async def from_async_buffer(
+    def from_buffer(
         cls,
-        async_buffer: AsyncBufferReadable,
+        buffer: BufferReadable,
         filename: str,
     ) -> "OutgoingAttachment":
         return cls(
-            content=await async_buffer.read(),
+            content=buffer.read(),
             filename=filename,
         )
 

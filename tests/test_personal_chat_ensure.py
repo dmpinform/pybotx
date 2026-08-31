@@ -1,24 +1,31 @@
+from collections.abc import Callable
 from datetime import datetime as dt
 from http import HTTPStatus
 from typing import Any
-from collections.abc import Callable
 from uuid import UUID
 
 import pytest
 from respx.router import MockRouter
 
 from pybotx import ChatInfo, ChatInfoMember, ChatTypes, UserKinds
-from tests.client.chats_api.factories import APIPersonalChatResponseFactory, ChatInfoFactory
-from tests.testkit import BotXRequest, assert_deep_equal, error_payload, mock_botx, ok_payload
+from tests.client.chats_api.factories import (
+    APIPersonalChatResponseFactory,
+    ChatInfoFactory,
+)
+from tests.testkit import (
+    BotXRequest,
+    assert_deep_equal,
+    error_payload,
+    mock_botx,
+    ok_payload,
+)
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__ensure_personal_chat__returns_existing(
+def test__ensure_personal_chat__returns_existing(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -35,8 +42,8 @@ async def test__ensure_personal_chat__returns_existing(
     endpoint = mock_botx(respx_mock, host, request, api_response, HTTPStatus.OK)
 
     # - Act -
-    async with bot_factory() as bot:
-        chat_info = await bot.ensure_personal_chat(
+    with bot_factory() as bot:
+        chat_info = bot.ensure_personal_chat(
             bot_id=bot_id,
             user_huid=UUID("6fafda2c-6505-57a5-a088-25ea5d1d0364"),
         )
@@ -50,7 +57,7 @@ async def test__ensure_personal_chat__returns_existing(
     assert endpoint.called
 
 
-async def test__ensure_personal_chat__creates_when_missing(
+def test__ensure_personal_chat__creates_when_missing(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -131,8 +138,8 @@ async def test__ensure_personal_chat__creates_when_missing(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        chat_info = await bot.ensure_personal_chat(
+    with bot_factory() as bot:
+        chat_info = bot.ensure_personal_chat(
             bot_id=bot_id,
             user_huid=user_huid,
             name=chat_name,

@@ -21,9 +21,7 @@ from tests.testkit import (
     ok_payload,
 )
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
@@ -35,7 +33,7 @@ def chat_id() -> str:
     return "f102c2a6-bae5-5ade-9ace-10e5bd96102d"
 
 
-async def test__create_chat_link__succeed(
+def test__create_chat_link__succeed(
     respx_mock: MockRouter,
     host: str,
     chat_id: str,
@@ -71,8 +69,8 @@ async def test__create_chat_link__succeed(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        chat_link = await bot.create_chat_link(
+    with bot_factory() as bot:
+        chat_link = bot.create_chat_link(
             bot_id=bot_id,
             chat_id=UUID(chat_id),
             link_type=ChatLinkTypes.PUBLIC,
@@ -132,7 +130,7 @@ async def test__create_chat_link__succeed(
         ),
     ),
 )
-async def test__create_chat_link__error_response(
+def test__create_chat_link__error_response(
     return_json: dict[str, Any],
     response_status: int,
     expected_exc_type: type[Exception],
@@ -164,21 +162,20 @@ async def test__create_chat_link__error_response(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        with pytest.raises(expected_exc_type):
-            await bot.create_chat_link(
-                bot_id=bot_id,
-                chat_id=UUID(chat_id),
-                link_type=ChatLinkTypes.PUBLIC,
-                access_code="1234",
-                link_ttl=3600,
-            )
+    with bot_factory() as bot, pytest.raises(expected_exc_type):
+        bot.create_chat_link(
+            bot_id=bot_id,
+            chat_id=UUID(chat_id),
+            link_type=ChatLinkTypes.PUBLIC,
+            access_code="1234",
+            link_ttl=3600,
+        )
 
     # - Assert -
     assert endpoint.called
 
 
-async def test__create_chat_link__unknown_server_error_reason(
+def test__create_chat_link__unknown_server_error_reason(
     respx_mock: MockRouter,
     host: str,
     chat_id: str,
@@ -207,15 +204,14 @@ async def test__create_chat_link__unknown_server_error_reason(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        with pytest.raises(InvalidBotXStatusCodeError):
-            await bot.create_chat_link(
-                bot_id=bot_id,
-                chat_id=UUID(chat_id),
-                link_type=ChatLinkTypes.PUBLIC,
-                access_code="1234",
-                link_ttl=3600,
-            )
+    with bot_factory() as bot, pytest.raises(InvalidBotXStatusCodeError):
+        bot.create_chat_link(
+            bot_id=bot_id,
+            chat_id=UUID(chat_id),
+            link_type=ChatLinkTypes.PUBLIC,
+            access_code="1234",
+            link_ttl=3600,
+        )
 
     # - Assert -
     assert endpoint.called

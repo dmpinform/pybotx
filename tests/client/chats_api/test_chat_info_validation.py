@@ -1,8 +1,8 @@
 from uuid import UUID
 
 from pybotx.client.chats_api.chat_info import (
-    BotXAPIChatInfoResult,
     BotXAPIChatInfoMember,
+    BotXAPIChatInfoResult,
 )
 from pybotx.models.enums import APIUserKinds
 

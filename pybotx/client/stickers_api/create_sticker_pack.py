@@ -44,13 +44,13 @@ class CreateStickerPackMethod(AuthorizedBotXMethod):
         **AuthorizedBotXMethod.status_handlers,
     }
 
-    async def execute(
+    def execute(
         self,
         payload: BotXAPICreateStickerPackRequestPayload,
     ) -> BotXAPICreateStickerPackResponsePayload:
         path = "/api/v3/botx/stickers/packs"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "POST",
             self._build_url(path),
             json=payload.jsonable_dict(),

@@ -1,11 +1,12 @@
-import asyncio
-from http import HTTPStatus
-from typing import Any
+import time
 from collections.abc import Callable, Sequence
+from concurrent.futures import ThreadPoolExecutor
+from http import HTTPStatus
+from tempfile import NamedTemporaryFile
+from typing import Any
 from uuid import UUID
 
 import pytest
-from aiofiles.tempfile import NamedTemporaryFile
 from respx.router import MockRouter
 
 from pybotx import (
@@ -27,7 +28,6 @@ from pybotx import (
 from tests.testkit import BotXRequest, mock_botx, ok_payload
 
 pytestmark = [
-    pytest.mark.asyncio,
     pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
@@ -46,7 +46,7 @@ BASE_REQUEST = BotXRequest(
 )
 
 
-async def test__send__succeed(
+def test__send__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -128,11 +128,11 @@ async def test__send__succeed(
         label="Keyboard button",
     )
 
-    async with NamedTemporaryFile("wb+") as async_buffer:
-        await async_buffer.write(b"Hello, world!\n")
-        await async_buffer.seek(0)
+    with NamedTemporaryFile("wb+") as buffer:
+        buffer.write(b"Hello, world!\n")
+        buffer.seek(0)
 
-        file = await OutgoingAttachment.from_async_buffer(async_buffer, "test.txt")
+        file = OutgoingAttachment.from_buffer(buffer, "test.txt")
 
     collector = HandlerCollector()
 
@@ -153,16 +153,15 @@ async def test__send__succeed(
     )
 
     @collector.command("/hello", description="Hello command")
-    async def hello_handler(message: IncomingMessage, bot: Bot) -> None:
-        await bot.send(message=outgoing_message)
+    def hello_handler(message: IncomingMessage, bot: Bot) -> None:
+        bot.send(message=outgoing_message)
 
     # - Act -
-    async with bot_factory(collectors=[collector]) as bot:
-        bot.async_execute_raw_bot_command(payload, verify_request=False)
+    with bot_factory(collectors=[collector]) as bot:
+        thread = bot.execute_raw_bot_command(payload, verify_request=False)
+        time.sleep(0.05)  # Let the handler reach the callback wait
 
-        await asyncio.sleep(0)  # Return control to event loop
-
-        await bot.set_raw_botx_method_result(
+        bot.set_raw_botx_method_result(
             {
                 "status": "ok",
                 "sync_id": SYNC_ID,
@@ -170,26 +169,26 @@ async def test__send__succeed(
             },
             verify_request=False,
         )
+        thread.join()
 
     # - Assert -
     assert endpoint.called
 
 
-async def test__answer_message__no_incoming_message_error_raised(
+def test__answer_message__no_incoming_message_error_raised(
     bot_factory: Any,
 ) -> None:
     # - Arrange -
 
     # - Act -
-    async with bot_factory() as bot:
-        with pytest.raises(AnswerDestinationLookupError) as exc:
-            await bot.answer_message("Hi!")
+    with bot_factory() as bot, pytest.raises(AnswerDestinationLookupError) as exc:
+        bot.answer_message("Hi!")
 
     # - Assert -
     assert "No IncomingMessage received" in str(exc.value)
 
 
-async def test__answer_message__succeed(
+def test__answer_message__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -259,17 +258,17 @@ async def test__answer_message__succeed(
         label="Keyboard button",
     )
 
-    async with NamedTemporaryFile("wb+") as async_buffer:
-        await async_buffer.write(b"Hello, world!\n")
-        await async_buffer.seek(0)
+    with NamedTemporaryFile("wb+") as buffer:
+        buffer.write(b"Hello, world!\n")
+        buffer.seek(0)
 
-        file = await OutgoingAttachment.from_async_buffer(async_buffer, "test.txt")
+        file = OutgoingAttachment.from_buffer(buffer, "test.txt")
 
     collector = HandlerCollector()
 
     @collector.command("/hello", description="Hello command")
-    async def hello_handler(message: IncomingMessage, bot: Bot) -> None:
-        await bot.answer_message(
+    def hello_handler(message: IncomingMessage, bot: Bot) -> None:
+        bot.answer_message(
             "Hi!",
             metadata={"foo": "bar"},
             bubbles=bubbles,
@@ -278,12 +277,11 @@ async def test__answer_message__succeed(
         )
 
     # - Act -
-    async with bot_factory(collectors=[collector]) as bot:
-        bot.async_execute_raw_bot_command(payload, verify_request=False)
+    with bot_factory(collectors=[collector]) as bot:
+        thread = bot.execute_raw_bot_command(payload, verify_request=False)
+        time.sleep(0.05)  # Let the handler reach the callback wait
 
-        await asyncio.sleep(0)  # Return control to event loop
-
-        await bot.set_raw_botx_method_result(
+        bot.set_raw_botx_method_result(
             {
                 "status": "ok",
                 "sync_id": SYNC_ID,
@@ -291,12 +289,13 @@ async def test__answer_message__succeed(
             },
             verify_request=False,
         )
+        thread.join()
 
     # - Assert -
     assert endpoint.called
 
 
-async def test__send_message__unknown_bot_account_error_raised(
+def test__send_message__unknown_bot_account_error_raised(
     respx_mock: MockRouter,
     host: str,
     bot_factory: Any,
@@ -312,13 +311,12 @@ async def test__send_message__unknown_bot_account_error_raised(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        with pytest.raises(UnknownBotAccountError) as exc:
-            await bot.send_message(
-                body="Hi!",
-                bot_id=unknown_bot_id,
-                chat_id=UUID(CHAT_ID),
-            )
+    with bot_factory() as bot, pytest.raises(UnknownBotAccountError) as exc:
+        bot.send_message(
+            body="Hi!",
+            bot_id=unknown_bot_id,
+            chat_id=UUID(CHAT_ID),
+        )
 
     # - Assert -
     assert str(unknown_bot_id) in str(exc.value)
@@ -370,7 +368,7 @@ async def test__send_message__unknown_bot_account_error_raised(
         ),
     ],
 )
-async def test__send_message__callback_error_raised(
+def test__send_message__callback_error_raised(
     reason: str,
     error_data: dict[str, Any],
     expected_exc: type[Exception],
@@ -390,18 +388,15 @@ async def test__send_message__callback_error_raised(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        task = asyncio.create_task(
-            bot.send_message(
+    with bot_factory() as bot, ThreadPoolExecutor(max_workers=1) as executor:
+        task = executor.submit(
+            bot.send_message,
                 body="Hi!",
                 bot_id=bot_id,
                 chat_id=UUID(CHAT_ID),
-            ),
         )
-
-        await asyncio.sleep(0)  # Return control to event loop
-
-        await bot.set_raw_botx_method_result(
+        time.sleep(0.05)  # Let the request register its callback
+        bot.set_raw_botx_method_result(
             {
                 "status": "error",
                 "sync_id": SYNC_ID,
@@ -414,14 +409,14 @@ async def test__send_message__callback_error_raised(
 
     # - Assert -
     with pytest.raises(expected_exc) as exc:
-        await task
+        task.result()
 
     for fragment in expected_fragments:
         assert fragment in str(exc.value)
     assert endpoint.called
 
 
-async def test__send_message__miminally_filled_succeed(
+def test__send_message__miminally_filled_succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -437,18 +432,15 @@ async def test__send_message__miminally_filled_succeed(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        task = asyncio.create_task(
-            bot.send_message(
+    with bot_factory() as bot, ThreadPoolExecutor(max_workers=1) as executor:
+        task = executor.submit(
+            bot.send_message,
                 body="Hi!",
                 bot_id=bot_id,
                 chat_id=UUID(CHAT_ID),
-            ),
         )
-
-        await asyncio.sleep(0)  # Return control to event loop
-
-        await bot.set_raw_botx_method_result(
+        time.sleep(0.05)  # Let the request register its callback
+        bot.set_raw_botx_method_result(
             {
                 "status": "ok",
                 "sync_id": SYNC_ID,
@@ -458,11 +450,11 @@ async def test__send_message__miminally_filled_succeed(
         )
 
     # - Assert -
-    assert (await task) == UUID(SYNC_ID)
+    assert task.result() == UUID(SYNC_ID)
     assert endpoint.called
 
 
-async def test__send_message__maximum_filled_succeed(
+def test__send_message__maximum_filled_succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -557,11 +549,11 @@ async def test__send_message__maximum_filled_succeed(
         HTTPStatus.ACCEPTED,
     )
 
-    async with NamedTemporaryFile("wb+") as async_buffer:
-        await async_buffer.write(b"Hello, world!\n")
-        await async_buffer.seek(0)
+    with NamedTemporaryFile("wb+") as buffer:
+        buffer.write(b"Hello, world!\n")
+        buffer.seek(0)
 
-        file = await OutgoingAttachment.from_async_buffer(async_buffer, "test.txt")
+        file = OutgoingAttachment.from_buffer(buffer, "test.txt")
 
     bubbles = BubbleMarkup()
     bubbles.add_button(
@@ -586,9 +578,9 @@ async def test__send_message__maximum_filled_succeed(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        task = asyncio.create_task(
-            bot.send_message(
+    with bot_factory() as bot, ThreadPoolExecutor(max_workers=1) as executor:
+        task = executor.submit(
+            bot.send_message,
                 body=body,
                 bot_id=bot_id,
                 chat_id=UUID(CHAT_ID),
@@ -602,12 +594,9 @@ async def test__send_message__maximum_filled_succeed(
                 stealth_mode=True,
                 send_push=True,
                 ignore_mute=True,
-            ),
         )
-
-        await asyncio.sleep(0)  # Return control to event loop
-
-        await bot.set_raw_botx_method_result(
+        time.sleep(0.05)  # Let the request register its callback
+        bot.set_raw_botx_method_result(
             {
                 "status": "ok",
                 "sync_id": SYNC_ID,
@@ -617,11 +606,11 @@ async def test__send_message__maximum_filled_succeed(
         )
 
     # - Assert -
-    assert (await task) == UUID(SYNC_ID)
+    assert task.result() == UUID(SYNC_ID)
     assert endpoint.called
 
 
-async def test__send_message__all_mentions_types_succeed(
+def test__send_message__all_mentions_types_succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -718,18 +707,15 @@ async def test__send_message__all_mentions_types_succeed(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        task = asyncio.create_task(
-            bot.send_message(
+    with bot_factory() as bot, ThreadPoolExecutor(max_workers=1) as executor:
+        task = executor.submit(
+            bot.send_message,
                 body=body,
                 bot_id=bot_id,
                 chat_id=UUID(CHAT_ID),
-            ),
         )
-
-        await asyncio.sleep(0)  # Return control to event loop
-
-        await bot.set_raw_botx_method_result(
+        time.sleep(0.05)  # Let the request register its callback
+        bot.set_raw_botx_method_result(
             {
                 "status": "ok",
                 "sync_id": SYNC_ID,
@@ -739,11 +725,11 @@ async def test__send_message__all_mentions_types_succeed(
         )
 
     # - Assert -
-    assert (await task) == UUID(SYNC_ID)
+    assert task.result() == UUID(SYNC_ID)
     assert endpoint.called
 
 
-async def test__send_message__message_body_max_length_error_raised(
+def test__send_message__message_body_max_length_error_raised(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -768,20 +754,19 @@ async def test__send_message__message_body_max_length_error_raised(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        with pytest.raises(ValueError) as exc:
-            await bot.send_message(
-                body=too_long_body,
-                bot_id=bot_id,
-                chat_id=UUID(CHAT_ID),
-            )
+    with bot_factory() as bot, pytest.raises(ValueError) as exc:
+        bot.send_message(
+            body=too_long_body,
+            bot_id=bot_id,
+            chat_id=UUID(CHAT_ID),
+        )
 
     # - Assert -
     assert "Message body length exceeds 4096 symbols" in str(exc.value)
     assert not endpoint.called
 
 
-async def test__send_message__message_body_max_length_succeed(
+def test__send_message__message_body_max_length_succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -805,18 +790,15 @@ async def test__send_message__message_body_max_length_succeed(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        task = asyncio.create_task(
-            bot.send_message(
+    with bot_factory() as bot, ThreadPoolExecutor(max_workers=1) as executor:
+        task = executor.submit(
+            bot.send_message,
                 body=max_long_body,
                 bot_id=bot_id,
                 chat_id=UUID(CHAT_ID),
-            ),
         )
-
-        await asyncio.sleep(0)  # Return control to event loop
-
-        await bot.set_raw_botx_method_result(
+        time.sleep(0.05)  # Let the request register its callback
+        bot.set_raw_botx_method_result(
             {
                 "status": "ok",
                 "sync_id": SYNC_ID,
@@ -826,5 +808,5 @@ async def test__send_message__message_body_max_length_succeed(
         )
 
     # - Assert -
-    assert (await task) == UUID(SYNC_ID)
+    assert task.result() == UUID(SYNC_ID)
     assert endpoint.called

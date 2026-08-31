@@ -20,14 +20,12 @@ from pybotx.client.smartapps_api.smartapp_manifest import (
     SmartappManifestUnreadCounterParams,
 )
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__send_smartapp_manifest__all_params_provided__succeed(
+def test__send_smartapp_manifest__all_params_provided__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -95,8 +93,8 @@ async def test__send_smartapp_manifest__all_params_provided__succeed(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        smartapp_manifest = await bot.send_smartapp_manifest(
+    with lifespan_wrapper(built_bot) as bot:
+        smartapp_manifest = bot.send_smartapp_manifest(
             bot_id=bot_id,
             ios=SmartappManifestIosParams(
                 fullscreen_layout=False,
@@ -144,7 +142,7 @@ async def test__send_smartapp_manifest__all_params_provided__succeed(
     )
 
 
-async def test__send_smartapp_manifest__only_default_params_provided__succeed(
+def test__send_smartapp_manifest__only_default_params_provided__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -192,8 +190,8 @@ async def test__send_smartapp_manifest__only_default_params_provided__succeed(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        smartapp_manifest = await bot.send_smartapp_manifest(bot_id=bot_id)
+    with lifespan_wrapper(built_bot) as bot:
+        smartapp_manifest = bot.send_smartapp_manifest(bot_id=bot_id)
 
     # - Assert -
     assert endpoint.called
@@ -220,7 +218,7 @@ async def test__send_smartapp_manifest__only_default_params_provided__succeed(
     )
 
 
-async def test__send_smartapp_manifest__with_only_full_layout__succeed(
+def test__send_smartapp_manifest__with_only_full_layout__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -280,8 +278,8 @@ async def test__send_smartapp_manifest__with_only_full_layout__succeed(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        smartapp_manifest = await bot.send_smartapp_manifest(
+    with lifespan_wrapper(built_bot) as bot:
+        smartapp_manifest = bot.send_smartapp_manifest(
             bot_id=bot_id,
             ios=SmartappManifestIosParams(
                 fullscreen_layout=False,
@@ -325,7 +323,7 @@ async def test__send_smartapp_manifest__with_only_full_layout__succeed(
     )
 
 
-async def test__send_smartapp_manifest__with_only_minimal_and_full_layout__succeed(
+def test__send_smartapp_manifest__with_only_minimal_and_full_layout__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -385,8 +383,8 @@ async def test__send_smartapp_manifest__with_only_minimal_and_full_layout__succe
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        smartapp_manifest = await bot.send_smartapp_manifest(
+    with lifespan_wrapper(built_bot) as bot:
+        smartapp_manifest = bot.send_smartapp_manifest(
             bot_id=bot_id,
             ios=SmartappManifestIosParams(
                 fullscreen_layout=False,
@@ -436,7 +434,7 @@ async def test__send_smartapp_manifest__with_only_minimal_and_full_layout__succe
     )
 
 
-async def test__send_smartapp_manifest__with_empty_layout__succeed(
+def test__send_smartapp_manifest__with_empty_layout__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -496,8 +494,8 @@ async def test__send_smartapp_manifest__with_empty_layout__succeed(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        smartapp_manifest = await bot.send_smartapp_manifest(
+    with lifespan_wrapper(built_bot) as bot:
+        smartapp_manifest = bot.send_smartapp_manifest(
             bot_id=bot_id,
             ios=SmartappManifestIosParams(
                 fullscreen_layout=False,

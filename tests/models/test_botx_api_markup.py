@@ -2,12 +2,11 @@ import json
 import warnings
 from typing import Any
 
-
 from pybotx import BubbleMarkup
 from pybotx.models.message.markup import (
-    BotXAPIMarkup,
     BotXAPIButton,
     BotXAPIButtonOptions,
+    BotXAPIMarkup,
     api_markup_from_domain,
 )
 

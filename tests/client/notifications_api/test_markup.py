@@ -1,4 +1,5 @@
-import asyncio
+import time
+from concurrent.futures import ThreadPoolExecutor
 from http import HTTPStatus
 from typing import Any
 from uuid import UUID
@@ -20,8 +21,7 @@ CHAT_ID = "054af49e-5e18-4dca-ad73-4f96b6de63fa"
 SYNC_ID = "21a9ec9e-f21f-4406-ac44-1a78d2ccf9e3"
 
 
-@pytest.mark.asyncio
-async def test__markup__defaults_filled(
+def test__markup__defaults_filled(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -80,20 +80,17 @@ async def test__markup__defaults_filled(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        task = asyncio.create_task(
-            bot.send_message(
+    with bot_factory() as bot, ThreadPoolExecutor(max_workers=1) as executor:
+        task = executor.submit(
+            bot.send_message,
                 body="Hi!",
                 bot_id=bot_id,
                 chat_id=UUID(CHAT_ID),
                 bubbles=bubbles,
                 keyboard=keyboard,
-            ),
         )
-
-        await asyncio.sleep(0)  # Return control to event loop
-
-        await bot.set_raw_botx_method_result(
+        time.sleep(0.05)  # Let the request register its callback
+        bot.set_raw_botx_method_result(
             {
                 "status": "ok",
                 "sync_id": SYNC_ID,
@@ -103,12 +100,11 @@ async def test__markup__defaults_filled(
         )
 
     # - Assert -
-    assert (await task) == UUID(SYNC_ID)
+    assert task.result() == UUID(SYNC_ID)
     assert endpoint.called
 
 
-@pytest.mark.asyncio
-async def test__markup__correctly_built(
+def test__markup__correctly_built(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -200,19 +196,16 @@ async def test__markup__correctly_built(
     bubbles.add_row([button_4, button_5])
 
     # - Act -
-    async with bot_factory() as bot:
-        task = asyncio.create_task(
-            bot.send_message(
+    with bot_factory() as bot, ThreadPoolExecutor(max_workers=1) as executor:
+        task = executor.submit(
+            bot.send_message,
                 body="Hi!",
                 bot_id=bot_id,
                 chat_id=UUID(CHAT_ID),
                 bubbles=bubbles,
-            ),
         )
-
-        await asyncio.sleep(0)  # Return control to event loop
-
-        await bot.set_raw_botx_method_result(
+        time.sleep(0.05)  # Let the request register its callback
+        bot.set_raw_botx_method_result(
             {
                 "status": "ok",
                 "sync_id": SYNC_ID,
@@ -222,12 +215,11 @@ async def test__markup__correctly_built(
         )
 
     # - Assert -
-    assert (await task) == UUID(SYNC_ID)
+    assert task.result() == UUID(SYNC_ID)
     assert endpoint.called
 
 
-@pytest.mark.asyncio
-async def test__markup__color_and_align(
+def test__markup__color_and_align(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -337,20 +329,17 @@ async def test__markup__color_and_align(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        task = asyncio.create_task(
-            bot.send_message(
+    with bot_factory() as bot, ThreadPoolExecutor(max_workers=1) as executor:
+        task = executor.submit(
+            bot.send_message,
                 body="Buttons styles:",
                 bot_id=bot_id,
                 chat_id=UUID(CHAT_ID),
                 bubbles=bubbles,
                 keyboard=keyboard,
-            ),
         )
-
-        await asyncio.sleep(0)  # Return control to event loop
-
-        await bot.set_raw_botx_method_result(
+        time.sleep(0.05)  # Let the request register its callback
+        bot.set_raw_botx_method_result(
             {
                 "status": "ok",
                 "sync_id": SYNC_ID,
@@ -360,12 +349,11 @@ async def test__markup__color_and_align(
         )
 
     # - Assert -
-    assert (await task) == UUID(SYNC_ID)
+    assert task.result() == UUID(SYNC_ID)
     assert endpoint.called
 
 
-@pytest.mark.asyncio
-async def test__markup__link(
+def test__markup__link(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -434,20 +422,17 @@ async def test__markup__link(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        task = asyncio.create_task(
-            bot.send_message(
+    with bot_factory() as bot, ThreadPoolExecutor(max_workers=1) as executor:
+        task = executor.submit(
+            bot.send_message,
                 body="Buttons links:",
                 bot_id=bot_id,
                 chat_id=UUID(CHAT_ID),
                 bubbles=bubbles,
                 keyboard=keyboard,
-            ),
         )
-
-        await asyncio.sleep(0)  # Return control to event loop
-
-        await bot.set_raw_botx_method_result(
+        time.sleep(0.05)  # Let the request register its callback
+        bot.set_raw_botx_method_result(
             {
                 "status": "ok",
                 "sync_id": SYNC_ID,
@@ -457,7 +442,7 @@ async def test__markup__link(
         )
 
     # - Assert -
-    assert (await task) == UUID(SYNC_ID)
+    assert task.result() == UUID(SYNC_ID)
     assert endpoint.called
 
 

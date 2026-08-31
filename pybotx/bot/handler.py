@@ -1,7 +1,7 @@
+from collections.abc import Callable
 from dataclasses import dataclass
 from functools import partial
 from typing import TYPE_CHECKING, Literal, TypeVar
-from collections.abc import Awaitable, Callable
 
 from pybotx.models.commands import BotCommand
 from pybotx.models.message.incoming_message import IncomingMessage
@@ -29,11 +29,11 @@ if TYPE_CHECKING:  # To avoid circular import
     from pybotx.bot.bot import Bot
 
 TBotCommand = TypeVar("TBotCommand", bound=BotCommand)
-HandlerFunc = Callable[[TBotCommand, "Bot"], Awaitable[None]]
+HandlerFunc = Callable[[TBotCommand, "Bot"], None]
 
 SyncSmartAppEventHandlerFunc = Callable[
     [SmartAppEvent, "Bot"],
-    Awaitable[BotAPISyncSmartAppEventResponse],
+    BotAPISyncSmartAppEventResponse,
 ]
 
 IncomingMessageHandlerFunc = HandlerFunc[IncomingMessage]
@@ -55,11 +55,11 @@ SystemEventHandlerFunc = (
     | HandlerFunc[ConferenceDeletedEvent]
 )
 
-VisibleFunc = Callable[[StatusRecipient, "Bot"], Awaitable[bool]]
+VisibleFunc = Callable[[StatusRecipient, "Bot"], bool]
 
 Middleware = Callable[
     [IncomingMessage, "Bot", IncomingMessageHandlerFunc],
-    Awaitable[None],
+    None,
 ]
 
 
@@ -68,7 +68,7 @@ class BaseIncomingMessageHandler:
     handler_func: IncomingMessageHandlerFunc
     middlewares: list[Middleware]
 
-    async def __call__(self, message: IncomingMessage, bot: "Bot") -> None:
+    def __call__(self, message: IncomingMessage, bot: "Bot") -> None:
         handler_func = self.handler_func
 
         for middleware in self.middlewares[::-1]:
@@ -77,7 +77,7 @@ class BaseIncomingMessageHandler:
                 call_next=handler_func,  # type: ignore[call-arg]
             )
 
-        await handler_func(message, bot)
+        handler_func(message, bot)
 
     def add_middlewares(self, middlewares: list[Middleware]) -> None:
         self.middlewares = middlewares + self.middlewares

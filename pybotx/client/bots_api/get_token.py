@@ -24,13 +24,13 @@ class BotXAPIGetTokenResponsePayload(VerifiedPayloadBaseModel):
 class GetTokenMethod(BotXMethod):
     status_handlers = {401: response_exception_thrower(InvalidBotAccountError)}
 
-    async def execute(
+    def execute(
         self,
         payload: BotXAPIGetTokenRequestPayload,
     ) -> BotXAPIGetTokenResponsePayload:
         path = f"/api/v2/botx/bots/{self._bot_id}/token"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "GET",
             self._build_url(path),
             params=payload.jsonable_dict(),

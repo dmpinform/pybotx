@@ -1,16 +1,17 @@
 import json
-from contextlib import asynccontextmanager
+from collections.abc import Callable, Iterator, Mapping
+from contextlib import contextmanager
 from json.decoder import JSONDecodeError
 from typing import (
     Any,
     NoReturn,
     TypeVar,
 )
-from collections.abc import AsyncGenerator, Awaitable, Callable, Mapping
 from uuid import UUID
 
 import httpx
 from mypy_extensions import Arg
+from pydantic import ValidationError
 
 from pybotx.bot.bot_accounts_storage import BotAccountsStorage
 from pybotx.bot.callbacks.callback_manager import CallbackManager
@@ -26,13 +27,12 @@ from pybotx.models.method_callbacks import (
     BotAPIMethodFailedCallback,
     BotXMethodCallback,
 )
-from pydantic import ValidationError
 
-StatusHandler = Callable[[Arg(httpx.Response, "response")], NoReturn]  # noqa: F821
+StatusHandler = Callable[[Arg(httpx.Response, "response")], NoReturn]
 StatusHandlers = Mapping[int, StatusHandler]
 
 CallbackExceptionHandler = Callable[
-    [Arg(BotAPIMethodFailedCallback, "callback")],  # noqa: F821
+    [Arg(BotAPIMethodFailedCallback, "callback")],
     NoReturn,
 ]
 ErrorCallbackHandlers = Mapping[str, CallbackExceptionHandler]
@@ -52,7 +52,7 @@ def response_exception_thrower(
 def callback_exception_thrower(
     exc: type[BaseClientError],
     comment: str | None = None,
-) -> CallbackExceptionHandler:  # noqa: F821
+) -> CallbackExceptionHandler:
     def factory(callback: BotAPIMethodFailedCallback) -> NoReturn:
         raise exc.from_callback(callback, comment)
 
@@ -66,7 +66,7 @@ class BotXMethod:
     def __init__(
         self,
         sender_bot_id: UUID,
-        httpx_client: httpx.AsyncClient,
+        httpx_client: httpx.Client,
         bot_accounts_storage: BotAccountsStorage,
         callbacks_manager: CallbackManager | None = None,
     ) -> None:
@@ -76,9 +76,9 @@ class BotXMethod:
         self._callbacks_manager = callbacks_manager
 
     # For MyPy checks
-    execute: Callable[..., Awaitable[Any]]
+    execute: Callable[..., Any]
 
-    async def execute(self, *args: Any, **kwargs: Any) -> Any:  # type: ignore
+    def execute(self, *args: Any, **kwargs: Any) -> Any:  # type: ignore
         raise NotImplementedError("You should define `execute` method")
 
     def _build_url(self, path: str) -> str:
@@ -107,31 +107,31 @@ class BotXMethod:
 
         return api_model
 
-    async def _botx_method_call(self, *args: Any, **kwargs: Any) -> httpx.Response:
+    def _botx_method_call(self, *args: Any, **kwargs: Any) -> httpx.Response:
         self._log_outgoing_request(*args, **kwargs)
 
-        response = await self._httpx_client.request(*args, **kwargs)
-        await self._raise_for_status(response)
+        response = self._httpx_client.request(*args, **kwargs)
+        self._raise_for_status(response)
 
         return response
 
-    @asynccontextmanager
-    async def _botx_method_stream(
+    @contextmanager
+    def _botx_method_stream(
         self,
         *args: Any,
         **kwargs: Any,
-    ) -> AsyncGenerator[httpx.Response, None]:
+    ) -> Iterator[httpx.Response]:
         self._log_outgoing_request(*args, **kwargs)
 
-        async with self._httpx_client.stream(*args, **kwargs) as response:
-            await self._raise_for_status(response)
+        with self._httpx_client.stream(*args, **kwargs) as response:
+            self._raise_for_status(response)
             yield response
 
-    async def _raise_for_status(self, response: httpx.Response) -> None:
+    def _raise_for_status(self, response: httpx.Response) -> None:
         handler = self.status_handlers.get(response.status_code)
         if handler:
             if not response.is_closed:
-                await response.aread()
+                response.read()
 
             handler(response)  # Handler should raise an exception
 
@@ -139,11 +139,11 @@ class BotXMethod:
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
             if not response.is_closed:
-                await response.aread()
+                response.read()
 
             raise InvalidBotXStatusCodeError(exc.response)
 
-    async def _process_callback(
+    def _process_callback(
         self,
         sync_id: UUID,
         wait_callback: bool,
@@ -155,7 +155,7 @@ class BotXMethod:
         )
 
         self._callbacks_manager.register_expected_callback(sync_id)
-        await self._callbacks_manager.create_botx_method_callback(sync_id)
+        self._callbacks_manager.create_botx_method_callback(sync_id)
 
         if callback_timeout is None:
             callback_timeout = default_callback_timeout
@@ -167,7 +167,7 @@ class BotXMethod:
             )
             return None
 
-        callback = await self._callbacks_manager.wait_botx_method_callback(
+        callback = self._callbacks_manager.wait_botx_method_callback(
             sync_id,
             callback_timeout,
         )

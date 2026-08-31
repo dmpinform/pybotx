@@ -14,14 +14,12 @@ from pybotx import (
 )
 from pybotx.models.stickers import Sticker, StickerPack
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__edit_sticker_pack__sticker_pack_not_found_error_raised(
+def test__edit_sticker_pack__sticker_pack_not_found_error_raised(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -46,9 +44,9 @@ async def test__edit_sticker_pack__sticker_pack_not_found_error_raised(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
+    with lifespan_wrapper(built_bot) as bot:
         with pytest.raises(StickerPackOrStickerNotFoundError) as exc:
-            await bot.edit_sticker_pack(
+            bot.edit_sticker_pack(
                 bot_id=bot_id,
                 sticker_pack_id=UUID("26080153-a57d-5a8c-af0e-fdecee3c4435"),
                 name="Sticker Pack 2.0",
@@ -64,7 +62,7 @@ async def test__edit_sticker_pack__sticker_pack_not_found_error_raised(
     assert endpoint.called
 
 
-async def test__edit_sticker__succeed(
+def test__edit_sticker__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -125,8 +123,8 @@ async def test__edit_sticker__succeed(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        sticker_pack = await bot.edit_sticker_pack(
+    with lifespan_wrapper(built_bot) as bot:
+        sticker_pack = bot.edit_sticker_pack(
             bot_id=bot_id,
             sticker_pack_id=UUID("d881f83a-db30-4cff-b60e-f24ac53deecf"),
             name="Sticker Pack 2.0",

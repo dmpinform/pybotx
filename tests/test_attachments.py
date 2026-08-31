@@ -1,7 +1,6 @@
-import asyncio
+from collections.abc import Callable
 from types import SimpleNamespace
 from typing import Any, cast
-from collections.abc import Callable
 from uuid import UUID
 
 import pytest
@@ -30,14 +29,12 @@ from pybotx.models.attachments import (
     convert_api_attachment_to_domain,
 )
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__attachment__open(
+def test__attachment__open(
     host: str,
     bot_account: BotAccountWithSecret,
     bot_id: UUID,
@@ -60,7 +57,7 @@ async def test__attachment__open(
     incoming_message: IncomingMessage | None = None
 
     @collector.default_message_handler
-    async def default_handler(message: IncomingMessage, bot: Bot) -> None:
+    def default_handler(message: IncomingMessage, bot: Bot) -> None:
         nonlocal incoming_message
         incoming_message = message
 
@@ -70,20 +67,19 @@ async def test__attachment__open(
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_raw_bot_command(payload, verify_request=False)
-
-        await asyncio.sleep(0)  # Return control to event loop
+    with lifespan_wrapper(built_bot) as bot:
+        thread = bot.execute_raw_bot_command(payload, verify_request=False)
+        thread.join()
 
         assert incoming_message and incoming_message.file
-        async with incoming_message.file.open() as fo:
-            read_content = await fo.read()
+        with incoming_message.file.open() as fo:
+            read_content = fo.read()
 
     # - Assert -
     assert read_content == b"Hello, world!\n"
 
 
-async def test__botx_api_attachment__uppercase_file_extension_mimetype() -> None:
+def test__botx_api_attachment__uppercase_file_extension_mimetype() -> None:
     # - Arrange -
     attachment = OutgoingAttachment(
         content=b"Hello, world!",
@@ -173,7 +169,7 @@ API_AND_DOMAIN_NON_FILE_ATTACHMENTS = (
     "api_attachment,domain_attachment,attr_name",
     API_AND_DOMAIN_NON_FILE_ATTACHMENTS,
 )
-async def test__async_execute_raw_bot_command__non_file_attachments_types(
+def test__execute_raw_bot_command__non_file_attachments_types(
     api_attachment: dict[str, Any],
     domain_attachment: IncomingAttachment,
     attr_name: str,
@@ -187,7 +183,7 @@ async def test__async_execute_raw_bot_command__non_file_attachments_types(
     incoming_message: IncomingMessage | None = None
 
     @collector.default_message_handler
-    async def default_handler(message: IncomingMessage, bot: Bot) -> None:
+    def default_handler(message: IncomingMessage, bot: Bot) -> None:
         nonlocal incoming_message
         incoming_message = message
         # Drop `raw_command` from asserting
@@ -196,8 +192,8 @@ async def test__async_execute_raw_bot_command__non_file_attachments_types(
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_raw_bot_command(payload, verify_request=False)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_raw_bot_command(payload, verify_request=False)
 
     # - Assert -
     assert getattr(incoming_message, attr_name) == domain_attachment
@@ -295,7 +291,7 @@ API_AND_DOMAIN_FILE_ATTACHMENTS = (
     "api_attachment,domain_attachment",
     API_AND_DOMAIN_FILE_ATTACHMENTS,
 )
-async def test__async_execute_raw_bot_command__file_attachments_types(
+def test__execute_raw_bot_command__file_attachments_types(
     api_attachment: dict[str, Any],
     domain_attachment: IncomingAttachment,
     api_incoming_message_factory: Callable[..., dict[str, Any]],
@@ -308,7 +304,7 @@ async def test__async_execute_raw_bot_command__file_attachments_types(
     incoming_message: IncomingMessage | None = None
 
     @collector.default_message_handler
-    async def default_handler(message: IncomingMessage, bot: Bot) -> None:
+    def default_handler(message: IncomingMessage, bot: Bot) -> None:
         nonlocal incoming_message
         incoming_message = message
         # Drop `raw_command` from asserting
@@ -317,15 +313,15 @@ async def test__async_execute_raw_bot_command__file_attachments_types(
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_raw_bot_command(payload, verify_request=False)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_raw_bot_command(payload, verify_request=False)
 
     # - Assert -
     assert incoming_message
     assert incoming_message.file == domain_attachment
 
 
-async def test__convert_api_attachment_to_domain__unsupported_type() -> None:
+def test__convert_api_attachment_to_domain__unsupported_type() -> None:
     api_attachment = cast(
         BotAPIAttachment,
         SimpleNamespace(type="unsupported"),
@@ -335,7 +331,7 @@ async def test__convert_api_attachment_to_domain__unsupported_type() -> None:
         convert_api_attachment_to_domain(api_attachment, "body")
 
 
-async def test__async_execute_raw_bot_command__unknown_attachment_type(
+def test__execute_raw_bot_command__unknown_attachment_type(
     api_incoming_message_factory: Callable[..., dict[str, Any]],
     bot_account: BotAccountWithSecret,
     loguru_caplog: pytest.LogCaptureFixture,
@@ -349,14 +345,14 @@ async def test__async_execute_raw_bot_command__unknown_attachment_type(
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_raw_bot_command(payload, verify_request=False)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_raw_bot_command(payload, verify_request=False)
 
     # - Assert -
     assert "Received unknown attachment type" in loguru_caplog.text
 
 
-async def test__async_execute_raw_bot_command__empty_attachment(
+def test__execute_raw_bot_command__empty_attachment(
     api_incoming_message_factory: Callable[..., dict[str, Any]],
     bot_account: BotAccountWithSecret,
     loguru_caplog: pytest.LogCaptureFixture,
@@ -375,7 +371,7 @@ async def test__async_execute_raw_bot_command__empty_attachment(
     incoming_message: IncomingMessage | None = None
 
     @collector.default_message_handler
-    async def default_handler(message: IncomingMessage, bot: Bot) -> None:
+    def default_handler(message: IncomingMessage, bot: Bot) -> None:
         nonlocal incoming_message
         incoming_message = message
         # Drop `raw_command` from asserting
@@ -384,8 +380,8 @@ async def test__async_execute_raw_bot_command__empty_attachment(
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_raw_bot_command(payload, verify_request=False)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_raw_bot_command(payload, verify_request=False)
 
     # - Assert -
     assert incoming_message

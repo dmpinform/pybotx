@@ -13,9 +13,7 @@ from pybotx.models.attachments import AttachmentImage
 from pybotx.models.enums import AttachmentTypes
 from tests.testkit import BotXRequest, error_payload, mock_botx, ok_payload
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
@@ -31,7 +29,7 @@ def avatar() -> AttachmentImage:
     )
 
 
-async def test__update_user_profile__minimal_update_succeed(
+def test__update_user_profile__minimal_update_succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -54,8 +52,8 @@ async def test__update_user_profile__minimal_update_succeed(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        await bot.update_user_profile(
+    with bot_factory() as bot:
+        bot.update_user_profile(
             bot_id=bot_id,
             user_huid=UUID("6fafda2c-6505-57a5-a088-25ea5d1d0364"),
         )
@@ -64,7 +62,7 @@ async def test__update_user_profile__minimal_update_succeed(
     assert endpoint.called
 
 
-async def test__update_user_profile__maximum_update_succeed(
+def test__update_user_profile__maximum_update_succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -97,8 +95,8 @@ async def test__update_user_profile__maximum_update_succeed(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        await bot.update_user_profile(
+    with bot_factory() as bot:
+        bot.update_user_profile(
             bot_id=bot_id,
             user_huid=UUID("6fafda2c-6505-57a5-a088-25ea5d1d0364"),
             avatar=avatar,
@@ -116,7 +114,7 @@ async def test__update_user_profile__maximum_update_succeed(
     assert endpoint.called
 
 
-async def test__update_user_profile__invalid_profile_data_error(
+def test__update_user_profile__invalid_profile_data_error(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -154,20 +152,19 @@ async def test__update_user_profile__invalid_profile_data_error(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        with pytest.raises(InvalidProfileDataError):
-            await bot.update_user_profile(
-                bot_id=bot_id,
-                user_huid=UUID("6fafda2c-6505-57a5-a088-25ea5d1d0364"),
-                name="John Bork",
-                public_name="Johny B.",
-                company="Doge Co",
-                company_position="Chief",
-                description="Just boss",
-                department="Commercy",
-                office="Moscow",
-                manager="Bob",
-            )
+    with bot_factory() as bot, pytest.raises(InvalidProfileDataError):
+        bot.update_user_profile(
+            bot_id=bot_id,
+            user_huid=UUID("6fafda2c-6505-57a5-a088-25ea5d1d0364"),
+            name="John Bork",
+            public_name="Johny B.",
+            company="Doge Co",
+            company_position="Chief",
+            description="Just boss",
+            department="Commercy",
+            office="Moscow",
+            manager="Bob",
+        )
 
     # - Assert -
     assert endpoint.called
@@ -180,7 +177,7 @@ async def test__update_user_profile__invalid_profile_data_error(
         "unexpected_error",
     ],
 )
-async def test__update_user_profile__service_unavailable_error(
+def test__update_user_profile__service_unavailable_error(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -204,9 +201,9 @@ async def test__update_user_profile__service_unavailable_error(
     )
 
     # - Act -
-    async with bot_factory() as bot:
+    with bot_factory() as bot:
         with pytest.raises(UserProfileUpdateUnavailableError) as exc:
-            await bot.update_user_profile(
+            bot.update_user_profile(
                 bot_id=bot_id,
                 user_huid=UUID("6fafda2c-6505-57a5-a088-25ea5d1d0364"),
             )

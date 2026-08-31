@@ -74,13 +74,13 @@ class UpdateUsersProfileMethod(AuthorizedBotXMethod):
         503: response_exception_thrower(UserProfileUpdateUnavailableError),
     }
 
-    async def execute(
+    def execute(
         self,
         payload: BotXAPIUpdateUserProfileRequestPayload,
     ) -> BotXAPIUpdateUserProfileResponsePayload:
         path = "/api/v3/botx/users/update_profile"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "PUT",
             self._build_url(path),
             json=payload.jsonable_dict(),

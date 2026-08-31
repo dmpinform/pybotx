@@ -90,13 +90,13 @@ class BotXAPIEditEventResponsePayload(VerifiedPayloadBaseModel):
 
 
 class EditEventMethod(AuthorizedBotXMethod):
-    async def execute(
+    def execute(
         self,
         payload: BotXAPIEditEventRequestPayload,
     ) -> None:
         path = "/api/v3/botx/events/edit_event"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "POST",
             self._build_url(path),
             json=payload.jsonable_dict(),

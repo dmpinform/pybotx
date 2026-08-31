@@ -16,14 +16,12 @@ from pybotx.models.chats import Chat
 from pybotx.models.enums import ChatTypes
 from pybotx.models.message.incoming_message import UserDevice, UserSender
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__smartapp__succeed(
+def test__smartapp__succeed(
     bot_account: BotAccountWithSecret,
 ) -> None:
     # - Arrange -
@@ -94,7 +92,7 @@ async def test__smartapp__succeed(
     smartapp: SmartAppEvent | None = None
 
     @collector.smartapp_event
-    async def smartapp_handler(event: SmartAppEvent, bot: Bot) -> None:
+    def smartapp_handler(event: SmartAppEvent, bot: Bot) -> None:
         nonlocal smartapp
         smartapp = event
         # Drop `raw_command` from asserting
@@ -103,8 +101,8 @@ async def test__smartapp__succeed(
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_raw_bot_command(payload, verify_request=False)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_raw_bot_command(payload, verify_request=False)
 
     # - Assert -
     assert smartapp == SmartAppEvent(

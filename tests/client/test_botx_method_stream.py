@@ -1,14 +1,15 @@
 from http import HTTPStatus
+from tempfile import NamedTemporaryFile
+from typing import IO
 from uuid import UUID
 
 import httpx
 import pytest
-from aiofiles.tempfile import NamedTemporaryFile
 from respx.router import MockRouter
 
 from pybotx import BotAccountWithSecret, InvalidBotXStatusCodeError
-from pybotx.async_buffer import AsyncBufferWritable
 from pybotx.bot.bot_accounts_storage import BotAccountsStorage
+from pybotx.buffer import BufferWritable
 from pybotx.client.botx_method import BotXMethod, response_exception_thrower
 from pybotx.client.exceptions.base import BaseClientError
 from tests.client.test_botx_method import BotXAPIFooBarRequestPayload
@@ -23,38 +24,36 @@ class FooBarStreamMethod(BotXMethod):
         403: response_exception_thrower(FooBarError),
     }
 
-    async def execute(
+    def execute(
         self,
         payload: BotXAPIFooBarRequestPayload,
-        async_buffer: AsyncBufferWritable,
+        buffer: BufferWritable,
     ) -> None:
         path = "/foo/bar"
 
-        async with self._botx_method_stream(
+        with self._botx_method_stream(
             "GET",
             self._build_url(path),
             params=payload.jsonable_dict(),
         ) as response:
-            async for chunk in response.aiter_bytes():
-                await async_buffer.write(chunk)
+            for chunk in response.iter_bytes():  # pragma: no branch
+                buffer.write(chunk)
 
-        await async_buffer.seek(0)
+        buffer.seek(0)
 
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__botx_method_stream__invalid_botx_status_code_error_raised(
-    httpx_client: httpx.AsyncClient,
+def test__botx_method_stream__invalid_botx_status_code_error_raised(
+    httpx_client: httpx.Client,
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
     bot_account: BotAccountWithSecret,
-    async_buffer: NamedTemporaryFile,
+    buffer: IO[bytes],
 ) -> None:
     # - Arrange -
     endpoint = respx_mock.get(f"https://{host}/foo/bar", params={"baz": 1}).mock(
@@ -70,20 +69,20 @@ async def test__botx_method_stream__invalid_botx_status_code_error_raised(
 
     # - Act -
     with pytest.raises(InvalidBotXStatusCodeError) as exc:
-        await method.execute(payload, async_buffer)
+        method.execute(payload, buffer)
 
     # - Assert -
     assert "failed with code 405" in str(exc.value)
     assert endpoint.called
 
 
-async def test__botx_method_stream__status_handler_called(
-    httpx_client: httpx.AsyncClient,
+def test__botx_method_stream__status_handler_called(
+    httpx_client: httpx.Client,
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
     bot_account: BotAccountWithSecret,
-    async_buffer: NamedTemporaryFile,
+    buffer: IO[bytes],
 ) -> None:
     # - Arrange -
     endpoint = respx_mock.get(f"https://{host}/foo/bar", params={"baz": 1}).mock(
@@ -99,20 +98,20 @@ async def test__botx_method_stream__status_handler_called(
 
     # - Act -
     with pytest.raises(FooBarError) as exc:
-        await method.execute(payload, async_buffer)
+        method.execute(payload, buffer)
 
     # - Assert -
     assert "403" in str(exc.value)
     assert endpoint.called
 
 
-async def test__botx_method_stream__succeed(
-    httpx_client: httpx.AsyncClient,
+def test__botx_method_stream__succeed(
+    httpx_client: httpx.Client,
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
     bot_account: BotAccountWithSecret,
-    async_buffer: NamedTemporaryFile,
+    buffer: IO[bytes],
 ) -> None:
     # - Arrange -
     endpoint = respx_mock.get(f"https://{host}/foo/bar", params={"baz": 1}).mock(
@@ -130,8 +129,8 @@ async def test__botx_method_stream__succeed(
     payload = BotXAPIFooBarRequestPayload.from_domain(baz=1)
 
     # - Act -
-    await method.execute(payload, async_buffer)
+    method.execute(payload, buffer)
 
     # - Assert -
-    assert await async_buffer.read() == b"Hello, world!\n"
+    assert buffer.read() == b"Hello, world!\n"
     assert endpoint.called

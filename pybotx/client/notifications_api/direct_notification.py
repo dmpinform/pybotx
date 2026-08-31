@@ -6,12 +6,12 @@ import httpx
 from pybotx.client.authorized_botx_method import AuthorizedBotXMethod
 from pybotx.client.botx_method import callback_exception_thrower
 from pybotx.client.exceptions.common import ChatNotFoundError
+from pybotx.client.exceptions.http import InvalidBotXResponsePayloadError
 from pybotx.client.exceptions.notifications import (
     BotIsNotChatMemberError,
     FinalRecipientsListEmptyError,
     StealthModeDisabledError,
 )
-from pybotx.client.exceptions.http import InvalidBotXResponsePayloadError
 from pybotx.constants import MAX_NOTIFICATION_BODY_LENGTH
 from pybotx.missing import Missing, Undefined
 from pybotx.models.api_base import UnverifiedPayloadBaseModel, VerifiedPayloadBaseModel
@@ -169,7 +169,7 @@ class DirectNotificationMethod(AuthorizedBotXMethod):
         "stealth_mode_disabled": callback_exception_thrower(StealthModeDisabledError),
     }
 
-    async def execute(
+    def execute(
         self,
         payload: BotXAPIDirectNotificationRequestPayload,
         wait_callback: bool,
@@ -178,7 +178,7 @@ class DirectNotificationMethod(AuthorizedBotXMethod):
     ) -> BotXAPIDirectNotificationResponsePayload:
         path = "/api/v4/botx/notifications/direct"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "POST",
             self._build_url(path),
             json=payload.jsonable_dict(),
@@ -189,7 +189,7 @@ class DirectNotificationMethod(AuthorizedBotXMethod):
             response,
         )
 
-        await self._process_callback(
+        self._process_callback(
             api_model.result.sync_id,
             wait_callback,
             callback_timeout,
@@ -199,13 +199,13 @@ class DirectNotificationMethod(AuthorizedBotXMethod):
 
 
 class DirectNotificationSyncMethod(AuthorizedBotXMethod):
-    async def execute(
+    def execute(
         self,
         payload: BotXAPIDirectNotificationRequestPayload,
     ) -> BotXAPIDirectNotificationResponsePayload:
         path = "/api/v4/botx/notifications/direct/sync"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "POST",
             self._build_url(path),
             json=payload.jsonable_dict(),

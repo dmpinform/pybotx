@@ -1,9 +1,9 @@
 from http import HTTPStatus
+from tempfile import NamedTemporaryFile
 from uuid import UUID
 
 import httpx
 import pytest
-from aiofiles.tempfile import NamedTemporaryFile
 from respx.router import MockRouter
 
 from pybotx import (
@@ -18,14 +18,12 @@ from pybotx import (
     lifespan_wrapper,
 )
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__edit_message__minimal_edit_succeed(
+def test__edit_message__minimal_edit_succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -51,8 +49,8 @@ async def test__edit_message__minimal_edit_succeed(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        await bot.edit_message(
+    with lifespan_wrapper(built_bot) as bot:
+        bot.edit_message(
             bot_id=bot_id,
             sync_id=UUID("8ba66c5b-40bf-5c77-911d-519cb4e382e9"),
         )
@@ -61,7 +59,7 @@ async def test__edit_message__minimal_edit_succeed(
     assert endpoint.called
 
 
-async def test__edit_message__maximum_edit_succeed(
+def test__edit_message__maximum_edit_succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -136,15 +134,15 @@ async def test__edit_message__maximum_edit_succeed(
     keyboard = KeyboardMarkup()
     keyboard.add_button(command="/keyboard-button", label="Keyboard button")
 
-    async with NamedTemporaryFile("wb+") as async_buffer:
-        await async_buffer.write(b"Hello, world!\n")
-        await async_buffer.seek(0)
+    with NamedTemporaryFile("wb+") as buffer:
+        buffer.write(b"Hello, world!\n")
+        buffer.seek(0)
 
-        file = await OutgoingAttachment.from_async_buffer(async_buffer, "test.txt")
+        file = OutgoingAttachment.from_buffer(buffer, "test.txt")
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        await bot.edit_message(
+    with lifespan_wrapper(built_bot) as bot:
+        bot.edit_message(
             bot_id=bot_id,
             sync_id=UUID("8ba66c5b-40bf-5c77-911d-519cb4e382e9"),
             body=f"{MentionBuilder.user(UUID('8f3abcc8-ba00-4c89-88e0-b786beb8ec24'))}!",
@@ -158,7 +156,7 @@ async def test__edit_message__maximum_edit_succeed(
     assert endpoint.called
 
 
-async def test__edit_message__clean_message_succeed(
+def test__edit_message__clean_message_succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -192,8 +190,8 @@ async def test__edit_message__clean_message_succeed(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        await bot.edit_message(
+    with lifespan_wrapper(built_bot) as bot:
+        bot.edit_message(
             bot_id=bot_id,
             sync_id=UUID("8ba66c5b-40bf-5c77-911d-519cb4e382e9"),
             body="",
@@ -207,7 +205,7 @@ async def test__edit_message__clean_message_succeed(
     assert endpoint.called
 
 
-async def test__edit__succeed(
+def test__edit__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -282,11 +280,11 @@ async def test__edit__succeed(
     keyboard = KeyboardMarkup()
     keyboard.add_button(command="/keyboard-button", label="Keyboard button")
 
-    async with NamedTemporaryFile("wb+") as async_buffer:
-        await async_buffer.write(b"Hello, world!\n")
-        await async_buffer.seek(0)
+    with NamedTemporaryFile("wb+") as buffer:
+        buffer.write(b"Hello, world!\n")
+        buffer.seek(0)
 
-        file = await OutgoingAttachment.from_async_buffer(async_buffer, "test.txt")
+        file = OutgoingAttachment.from_buffer(buffer, "test.txt")
 
     message = EditMessage(
         bot_id=bot_id,
@@ -299,8 +297,8 @@ async def test__edit__succeed(
     )
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        await bot.edit(message=message)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.edit(message=message)
 
     # - Assert -
     assert endpoint.called

@@ -98,13 +98,13 @@ class CreateChatLinkMethod(AuthorizedBotXMethod):
         500: server_error_handler,
     }
 
-    async def execute(
+    def execute(
         self,
         payload: BotXAPICreateChatLinkRequestPayload,
     ) -> BotXAPICreateChatLinkResponsePayload:
         path = "/api/v3/botx/chats/create_link"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "POST",
             self._build_url(path),
             json=payload.jsonable_dict(),

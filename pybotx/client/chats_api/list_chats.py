@@ -2,10 +2,11 @@ from datetime import datetime
 from typing import Any, Literal
 from uuid import UUID
 
+from pydantic import ValidationError, field_validator
+
 from pybotx.client.authorized_botx_method import AuthorizedBotXMethod
 from pybotx.logger import logger
 from pybotx.models.api_base import VerifiedPayloadBaseModel
-from pydantic import ValidationError, field_validator
 from pybotx.models.chats import ChatListItem
 from pybotx.models.enums import APIChatTypes, convert_chat_type_to_domain
 
@@ -71,10 +72,10 @@ class BotXAPIListChatResponsePayload(VerifiedPayloadBaseModel):
 
 
 class ListChatsMethod(AuthorizedBotXMethod):
-    async def execute(self) -> BotXAPIListChatResponsePayload:
+    def execute(self) -> BotXAPIListChatResponsePayload:
         path = "/api/v3/botx/chats/list"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "GET",
             self._build_url(path),
         )

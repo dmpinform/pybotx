@@ -46,7 +46,7 @@ class GetStickerMethod(AuthorizedBotXMethod):
         404: response_exception_thrower(StickerPackOrStickerNotFoundError),
     }
 
-    async def execute(
+    def execute(
         self,
         payload: BotXAPIGetStickerRequestPayload,
     ) -> BotXAPIGetStickerResponsePayload:
@@ -56,7 +56,7 @@ class GetStickerMethod(AuthorizedBotXMethod):
             f"stickers/{jsonable_dict['sticker_id']}"
         )
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "GET",
             self._build_url(path),
         )

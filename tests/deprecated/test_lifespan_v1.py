@@ -7,14 +7,12 @@ from respx.router import MockRouter
 
 from pybotx import Bot, BotAccountWithSecret, BotXAuthVersion, HandlerCollector
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__startup__authorize_cant_get_token(
+def test__startup__authorize_cant_get_token(
     respx_mock: MockRouter,
     loguru_caplog: pytest.LogCaptureFixture,
     bot_account: BotAccountWithSecret,
@@ -44,7 +42,7 @@ async def test__startup__authorize_cant_get_token(
     )
 
     # - Act -
-    await bot.startup()
+    bot.startup()
 
     # - Assert -
     assert token_endpoint.called
@@ -53,10 +51,10 @@ async def test__startup__authorize_cant_get_token(
     assert f"host - {host}, bot_id - {bot_id}" in loguru_caplog.text
 
     # Cleanup
-    await bot.shutdown()
+    bot.shutdown()
 
 
-async def test__startup__can_skip_fetching_tokens(
+def test__startup__can_skip_fetching_tokens(
     respx_mock: MockRouter,
     bot_account: BotAccountWithSecret,
     host: str,
@@ -78,16 +76,16 @@ async def test__startup__can_skip_fetching_tokens(
     )
 
     # - Act -
-    await bot.startup(fetch_tokens=False)
+    bot.startup(fetch_tokens=False)
 
     # - Assert -
     assert not token_endpoint.called
 
     # Cleanup
-    await bot.shutdown()
+    bot.shutdown()
 
 
-async def test__fetch_tokens__succeeds_for_auth_v1(
+def test__fetch_tokens__succeeds_for_auth_v1(
     respx_mock: MockRouter,
     bot_account: BotAccountWithSecret,
     host: str,
@@ -116,11 +114,11 @@ async def test__fetch_tokens__succeeds_for_auth_v1(
     )
 
     # - Act -
-    await bot.fetch_tokens()
+    bot.fetch_tokens()
 
     # - Assert -
     assert token_endpoint.called
     assert bot._bot_accounts_storage.get_token_or_none(bot_id) == "token"
 
     # Cleanup
-    await bot.shutdown()
+    bot.shutdown()

@@ -1,7 +1,7 @@
 import tempfile
 from typing import Literal
 
-from pybotx.async_buffer import AsyncBufferReadable
+from pybotx.buffer import BufferReadable
 from pybotx.client.authorized_botx_method import AuthorizedBotXMethod
 from pybotx.client.botx_method import response_exception_thrower
 from pybotx.client.exceptions.files import FileTypeNotAllowed
@@ -27,22 +27,22 @@ class UploadFileMethod(AuthorizedBotXMethod):
         400: response_exception_thrower(FileTypeNotAllowed),
     }
 
-    async def execute(
+    def execute(
         self,
-        async_buffer: AsyncBufferReadable,
+        buffer: BufferReadable,
         filename: str,
     ) -> BotXAPIUploadFileResponsePayload:
         path = "/api/v3/botx/smartapps/upload_file"
 
         with tempfile.SpooledTemporaryFile(max_size=CHUNK_SIZE) as tmp_file:
-            chunk = await async_buffer.read(CHUNK_SIZE)
+            chunk = buffer.read(CHUNK_SIZE)
             while chunk:
                 tmp_file.write(chunk)
-                chunk = await async_buffer.read(CHUNK_SIZE)
+                chunk = buffer.read(CHUNK_SIZE)
 
             tmp_file.seek(0)
 
-            response = await self._botx_method_call(
+            response = self._botx_method_call(
                 "POST",
                 self._build_url(path),
                 files={"content": (filename, tmp_file)},

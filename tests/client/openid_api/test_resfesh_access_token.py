@@ -7,14 +7,12 @@ from respx.router import MockRouter
 
 from pybotx import Bot, BotAccountWithSecret, HandlerCollector, lifespan_wrapper
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__refresh_access_token__succeed(
+def test__refresh_access_token__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -41,8 +39,8 @@ async def test__refresh_access_token__succeed(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        await bot.refresh_access_token(
+    with lifespan_wrapper(built_bot) as bot:
+        bot.refresh_access_token(
             bot_id=bot_id,
             huid=UUID("a465f0f3-1354-491c-8f11-f400164295cb"),
             ref=UUID("a465f0f3-1354-491c-8f11-f400164295cb"),

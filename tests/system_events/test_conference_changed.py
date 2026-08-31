@@ -1,6 +1,6 @@
+from collections.abc import Callable
 from datetime import datetime
 from typing import Any, cast
-from collections.abc import Callable
 from uuid import UUID
 
 import pytest
@@ -17,14 +17,12 @@ from pybotx.models.enums import ConferenceLinkTypes
 from pybotx.models.system_events.conference_changed import ConferenceChangedEvent
 from tests.system_events.factories import ConferenceChangedDataFactory
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__conference_changed_succeed(
+def test__conference_changed_succeed(
     bot_account: BotAccountWithSecret,
     datetime_formatter: Callable[[str], datetime],
     bot_id: UUID,
@@ -52,7 +50,7 @@ async def test__conference_changed_succeed(
     conference_changed: ConferenceChangedEvent | None = None
 
     @collector.conference_changed
-    async def conference_changed_handler(
+    def conference_changed_handler(
         event: ConferenceChangedEvent,
         bot: Bot,
     ) -> None:
@@ -62,8 +60,8 @@ async def test__conference_changed_succeed(
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_raw_bot_command(payload, verify_request=False)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_raw_bot_command(payload, verify_request=False)
 
     # - Assert -
     diff = DeepDiff(

@@ -1,4 +1,5 @@
-import asyncio
+import time
+from concurrent.futures import ThreadPoolExecutor
 from http import HTTPStatus
 from uuid import UUID
 
@@ -9,13 +10,12 @@ from respx.router import MockRouter
 from pybotx import Bot, BotAccountWithSecret, HandlerCollector, lifespan_wrapper
 
 pytestmark = [
-    pytest.mark.asyncio,
     pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__send_smartapp_custom_notification__succeed(
+def test__send_smartapp_custom_notification__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -46,27 +46,26 @@ async def test__send_smartapp_custom_notification__succeed(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        task = asyncio.create_task(
-            bot.send_smartapp_custom_notification(
-                bot_id=bot_id,
-                group_chat_id=UUID("705df263-6bfd-536a-9d51-13524afaab5c"),
-                title="test",
-                body="test",
-                meta={"message": "ping"},
-            ),
-        )
-        await asyncio.sleep(0)  # Return control to event loop
-
-        await bot.set_raw_botx_method_result(
-            {
-                "status": "ok",
-                "sync_id": "21a9ec9e-f21f-4406-ac44-1a78d2ccf9e3",
-                "result": {},
-            },
-            verify_request=False,
-        )
+    with lifespan_wrapper(built_bot) as bot:
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            task = executor.submit(
+                bot.send_smartapp_custom_notification,
+                    bot_id=bot_id,
+                    group_chat_id=UUID("705df263-6bfd-536a-9d51-13524afaab5c"),
+                    title="test",
+                    body="test",
+                    meta={"message": "ping"},
+            )
+            time.sleep(0.05)  # Let the request register its callback
+            bot.set_raw_botx_method_result(
+                {
+                    "status": "ok",
+                    "sync_id": "21a9ec9e-f21f-4406-ac44-1a78d2ccf9e3",
+                    "result": {},
+                },
+                verify_request=False,
+            )
 
     # - Assert -
-    assert await task == UUID("21a9ec9e-f21f-4406-ac44-1a78d2ccf9e3")
+    assert task.result() == UUID("21a9ec9e-f21f-4406-ac44-1a78d2ccf9e3")
     assert endpoint.called

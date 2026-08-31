@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from factory.base import Factory, DictFactory
+from factory.base import DictFactory, Factory
 from factory.declarations import LazyFunction, SubFactory
 
 from pybotx import ChatInfo, ChatInfoMember, ChatTypes, UserKinds

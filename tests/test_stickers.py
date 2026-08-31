@@ -1,11 +1,11 @@
-from http import HTTPStatus
-from typing import Any
 from collections.abc import Callable
+from http import HTTPStatus
+from tempfile import NamedTemporaryFile
+from typing import IO, Any
 from uuid import UUID
 
 import httpx
 import pytest
-from aiofiles.tempfile import NamedTemporaryFile
 from respx.router import MockRouter
 
 from pybotx import (
@@ -17,9 +17,7 @@ from pybotx import (
     lifespan_wrapper,
 )
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
@@ -32,11 +30,11 @@ PNG_IMAGE = (
 )
 
 
-async def test__sticker__download(
+def test__sticker__download(
     respx_mock: MockRouter,
     host: str,
     bot_account: BotAccountWithSecret,
-    async_buffer: NamedTemporaryFile,
+    buffer: IO[bytes],
     api_incoming_message_factory: Callable[..., dict[str, Any]],
 ) -> None:
     # - Arrange -
@@ -65,15 +63,15 @@ async def test__sticker__download(
     collector = HandlerCollector()
 
     @collector.default_message_handler
-    async def default_handler(message: IncomingMessage, bot: Bot) -> None:
-        await sticker.download(async_buffer)
+    def default_handler(message: IncomingMessage, bot: Bot) -> None:
+        sticker.download(buffer)
 
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_raw_bot_command(payload, verify_request=False)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_raw_bot_command(payload, verify_request=False)
 
     # - Assert -
-    assert await async_buffer.read() == PNG_IMAGE
+    assert buffer.read() == PNG_IMAGE
     assert endpoint.called

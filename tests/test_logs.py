@@ -1,11 +1,11 @@
-from http import HTTPStatus
-from typing import Any, cast
 from collections.abc import Callable
+from http import HTTPStatus
+from tempfile import NamedTemporaryFile
+from typing import Any, cast
 from uuid import UUID
 
 import httpx
 import pytest
-from aiofiles.tempfile import NamedTemporaryFile
 from respx.router import MockRouter
 
 from pybotx import (
@@ -17,14 +17,12 @@ from pybotx import (
 )
 from pybotx.models.attachments import AttachmentDocument, OutgoingAttachment
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__attachment__trimmed_in_incoming_message(
+def test__attachment__trimmed_in_incoming_message(
     bot_account: BotAccountWithSecret,
     api_incoming_message_factory: Callable[..., dict[str, Any]],
     loguru_caplog: pytest.LogCaptureFixture,
@@ -47,7 +45,7 @@ async def test__attachment__trimmed_in_incoming_message(
     file_data: bytes | None = None
 
     @collector.default_message_handler
-    async def default_handler(message: IncomingMessage, bot: Bot) -> None:
+    def default_handler(message: IncomingMessage, bot: Bot) -> None:
         nonlocal file_data
         file = cast(AttachmentDocument, message.file)
         file_data = file.content
@@ -55,8 +53,8 @@ async def test__attachment__trimmed_in_incoming_message(
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_raw_bot_command(payload, verify_request=False)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_raw_bot_command(payload, verify_request=False)
 
     # - Assert -
     assert "...<trimmed>" in loguru_caplog.text
@@ -66,7 +64,7 @@ async def test__attachment__trimmed_in_incoming_message(
     )
 
 
-async def test__attachment__trimmed_in_outgoing_message(
+def test__attachment__trimmed_in_outgoing_message(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -102,21 +100,21 @@ async def test__attachment__trimmed_in_outgoing_message(
 
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
-    async with NamedTemporaryFile("wb+") as async_buffer:
-        await async_buffer.write(
+    with NamedTemporaryFile("wb+") as buffer:
+        buffer.write(
             b"Hello, amazing world! Very very very very very very long text to"
             b" test that trimming content doesn't affect file in incoming message",
         )
-        await async_buffer.seek(0)
+        buffer.seek(0)
 
-        file = await OutgoingAttachment.from_async_buffer(
-            async_buffer,
+        file = OutgoingAttachment.from_buffer(
+            buffer,
             "test.txt",
         )
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        await bot.send_message(
+    with lifespan_wrapper(built_bot) as bot:
+        bot.send_message(
             body="Hi!",
             bot_id=bot_id,
             chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),

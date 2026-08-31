@@ -1,6 +1,6 @@
+from collections.abc import Sequence
 from http import HTTPStatus
 from typing import Any
-from collections.abc import Sequence
 from uuid import UUID
 
 import pytest
@@ -9,9 +9,7 @@ from respx.router import MockRouter
 from pybotx import ChatNotFoundError, PermissionDeniedError
 from tests.testkit import BotXRequest, error_payload, mock_botx, ok_payload
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
@@ -67,7 +65,7 @@ REQUEST_FULL = BotXRequest(
         ),
     ],
 )
-async def test__enable_stealth__error_response(
+def test__enable_stealth__error_response(
     response_status: int,
     response_json: dict[str, Any],
     expected_exc: type[Exception],
@@ -81,12 +79,11 @@ async def test__enable_stealth__error_response(
     endpoint = mock_botx(respx_mock, host, REQUEST_BASE, response_json, response_status)
 
     # - Act -
-    async with bot_factory() as bot:
-        with pytest.raises(expected_exc) as exc:
-            await bot.enable_stealth(
-                bot_id=bot_id,
-                chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
-            )
+    with bot_factory() as bot, pytest.raises(expected_exc) as exc:
+        bot.enable_stealth(
+            bot_id=bot_id,
+            chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
+        )
 
     # - Assert -
     for fragment in expected_fragments:
@@ -94,7 +91,7 @@ async def test__enable_stealth__error_response(
     assert endpoint.called
 
 
-async def test__enable_stealth__maximum_filled_succeed(
+def test__enable_stealth__maximum_filled_succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -104,8 +101,8 @@ async def test__enable_stealth__maximum_filled_succeed(
     endpoint = mock_botx(respx_mock, host, REQUEST_FULL, ok_payload(True), HTTPStatus.OK)
 
     # - Act -
-    async with bot_factory() as bot:
-        await bot.enable_stealth(
+    with bot_factory() as bot:
+        bot.enable_stealth(
             bot_id=bot_id,
             chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
             disable_web_client=True,

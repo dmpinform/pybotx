@@ -1,11 +1,12 @@
-import pytest
 from unittest.mock import Mock
+
+import pytest
 
 from pybotx.models.enums import (
     APIChatTypes,
     BotAPIClientNetworkContours,
-    ClientNetworkContours,
     ChatTypes,
+    ClientNetworkContours,
     convert_chat_type_from_domain,
     convert_chat_type_to_domain,
     convert_client_network_contour_to_domain,

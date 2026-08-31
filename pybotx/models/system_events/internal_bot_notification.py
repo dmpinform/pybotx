@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from pydantic import Field
+
 from pybotx.models.api_base import VerifiedPayloadBaseModel
 from pybotx.models.base_command import (
     BotAPIBaseCommand,
@@ -13,7 +15,6 @@ from pybotx.models.bot_account import BotAccount
 from pybotx.models.bot_sender import BotSender
 from pybotx.models.chats import Chat
 from pybotx.models.enums import BotAPISystemEventTypes, convert_chat_type_to_domain
-from pydantic import Field
 
 
 @dataclass(slots=True)

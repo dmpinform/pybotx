@@ -14,9 +14,7 @@ from pybotx import (
 from pybotx.client.exceptions.http import InvalidBotXResponsePayloadError
 from tests.testkit import BotXRequest, error_payload, mock_botx, ok_payload
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
@@ -32,7 +30,7 @@ REQUEST = BotXRequest(
 )
 
 
-async def test__send_message_sync__succeed(
+def test__send_message_sync__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -48,8 +46,8 @@ async def test__send_message_sync__succeed(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        sync_id = await bot.send_message_sync(
+    with bot_factory() as bot:
+        sync_id = bot.send_message_sync(
             body="Hi!",
             bot_id=bot_id,
             chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
@@ -69,7 +67,7 @@ async def test__send_message_sync__succeed(
         ("stealth_mode_disabled", StealthModeDisabledError),
     ],
 )
-async def test__send_message_sync__known_error_reason_raised(
+def test__send_message_sync__known_error_reason_raised(
     reason: str,
     exc_type: type[Exception],
     respx_mock: MockRouter,
@@ -92,19 +90,18 @@ async def test__send_message_sync__known_error_reason_raised(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        with pytest.raises(exc_type):
-            await bot.send_message_sync(
-                body="Hi!",
-                bot_id=bot_id,
-                chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
-            )
+    with bot_factory() as bot, pytest.raises(exc_type):
+        bot.send_message_sync(
+            body="Hi!",
+            bot_id=bot_id,
+            chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
+        )
 
     # - Assert -
     assert endpoint.called
 
 
-async def test__send_message_sync__unknown_error_reason_raised(
+def test__send_message_sync__unknown_error_reason_raised(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -120,13 +117,12 @@ async def test__send_message_sync__unknown_error_reason_raised(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        with pytest.raises(InvalidBotXResponsePayloadError):
-            await bot.send_message_sync(
-                body="Hi!",
-                bot_id=bot_id,
-                chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
-            )
+    with bot_factory() as bot, pytest.raises(InvalidBotXResponsePayloadError):
+        bot.send_message_sync(
+            body="Hi!",
+            bot_id=bot_id,
+            chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
+        )
 
     # - Assert -
     assert endpoint.called

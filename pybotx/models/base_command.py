@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from typing import Any, Literal
 from uuid import UUID
 
+from pydantic import field_validator
+
 from pybotx.bot.api.exceptions import (
     UnknownSystemEventError,
     UnsupportedBotAPIVersionError,
@@ -15,7 +17,6 @@ from pybotx.models.enums import (
     BotAPICommandTypes,
     BotAPISystemEventTypes,
 )
-from pydantic import field_validator
 
 
 class BotAPICommandPayload(VerifiedPayloadBaseModel):

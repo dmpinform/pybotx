@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from typing import Any, Literal
 from uuid import UUID
 
+from pydantic import Field
+
 from pybotx.models.api_base import VerifiedPayloadBaseModel
 from pybotx.models.base_command import (
     BaseBotAPIContext,
@@ -11,7 +13,6 @@ from pybotx.models.base_command import (
 )
 from pybotx.models.bot_account import BotAccount
 from pybotx.models.enums import BotAPISystemEventTypes
-from pydantic import Field
 
 
 @dataclass(slots=True)

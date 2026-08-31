@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from typing import Any, Literal
 from uuid import UUID
 
+from pydantic import Field
+
 from pybotx.models.api_base import VerifiedPayloadBaseModel
 from pybotx.models.base_command import (
     BotAPIBaseCommand,
@@ -19,7 +21,6 @@ from pybotx.models.enums import (
     convert_chat_type_to_domain,
     convert_user_kind_to_domain,
 )
-from pydantic import Field
 
 
 @dataclass(slots=True)

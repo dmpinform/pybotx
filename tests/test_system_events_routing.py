@@ -45,14 +45,12 @@ def chat_created(
     )
 
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__system_event_handler__called(
+def test__system_event_handler__called(
     chat_created: ChatCreatedEvent,
     correct_handler_trigger: Mock,
     bot_account: BotAccountWithSecret,
@@ -61,20 +59,20 @@ async def test__system_event_handler__called(
     collector = HandlerCollector()
 
     @collector.chat_created
-    async def chat_created_handler(event: ChatCreatedEvent, bot: Bot) -> None:
+    def chat_created_handler(event: ChatCreatedEvent, bot: Bot) -> None:
         correct_handler_trigger()
 
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_bot_command(chat_created)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_bot_command(chat_created)
 
     # - Assert -
     correct_handler_trigger.assert_called_once()
 
 
-async def test__system_event_handler__no_handler_for_system_event(
+def test__system_event_handler__no_handler_for_system_event(
     chat_created: ChatCreatedEvent,
     bot_account: BotAccountWithSecret,
     loguru_caplog: pytest.LogCaptureFixture,
@@ -85,14 +83,14 @@ async def test__system_event_handler__no_handler_for_system_event(
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_bot_command(chat_created)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_bot_command(chat_created)
 
     # - Assert -
     assert "Handler for `ChatCreatedEvent` not found" in loguru_caplog.text
 
 
-async def test__system_event_handler__handler_in_first_collector(
+def test__system_event_handler__handler_in_first_collector(
     chat_created: ChatCreatedEvent,
     correct_handler_trigger: Mock,
     bot_account: BotAccountWithSecret,
@@ -102,20 +100,20 @@ async def test__system_event_handler__handler_in_first_collector(
     collector_2 = HandlerCollector()
 
     @collector_1.chat_created
-    async def chat_created_handler(event: ChatCreatedEvent, bot: Bot) -> None:
+    def chat_created_handler(event: ChatCreatedEvent, bot: Bot) -> None:
         correct_handler_trigger()
 
     built_bot = Bot(collectors=[collector_1, collector_2], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_bot_command(chat_created)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_bot_command(chat_created)
 
     # - Assert -
     correct_handler_trigger.assert_called_once()
 
 
-async def test__system_event_handler__handler_in_second_collector(
+def test__system_event_handler__handler_in_second_collector(
     chat_created: ChatCreatedEvent,
     correct_handler_trigger: Mock,
     bot_account: BotAccountWithSecret,
@@ -125,14 +123,14 @@ async def test__system_event_handler__handler_in_second_collector(
     collector_2 = HandlerCollector()
 
     @collector_2.chat_created
-    async def chat_created_handler(event: ChatCreatedEvent, bot: Bot) -> None:
+    def chat_created_handler(event: ChatCreatedEvent, bot: Bot) -> None:
         correct_handler_trigger()
 
     built_bot = Bot(collectors=[collector_1, collector_2], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_bot_command(chat_created)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_bot_command(chat_created)
 
     # - Assert -
     correct_handler_trigger.assert_called_once()

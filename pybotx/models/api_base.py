@@ -1,9 +1,10 @@
 import json
 from typing import Any, cast
 
-from pybotx.missing import Undefined
 from pydantic import BaseModel, ConfigDict
 from pydantic_core import to_jsonable_python
+
+from pybotx.missing import Undefined
 
 
 def _remove_undefined(

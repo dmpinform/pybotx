@@ -18,10 +18,10 @@ class BotXAPIStopTypingEventResponsePayload(VerifiedPayloadBaseModel):
 
 
 class StopTypingEventMethod(AuthorizedBotXMethod):
-    async def execute(self, payload: BotXAPIStopTypingEventRequestPayload) -> None:
+    def execute(self, payload: BotXAPIStopTypingEventRequestPayload) -> None:
         path = "/api/v3/botx/events/stop_typing"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "POST",
             self._build_url(path),
             json=payload.jsonable_dict(),

@@ -60,13 +60,13 @@ class BotXAPIGetStickerPacksResponsePayload(VerifiedPayloadBaseModel):
 
 
 class GetStickerPacksMethod(AuthorizedBotXMethod):
-    async def execute(
+    def execute(
         self,
         payload: BotXAPIGetStickerPacksRequestPayload,
     ) -> BotXAPIGetStickerPacksResponsePayload:
         path = "/api/v3/botx/stickers/packs"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "GET",
             self._build_url(path),
             params=payload.jsonable_dict(),

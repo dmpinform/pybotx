@@ -1,6 +1,6 @@
+from collections.abc import Callable
 from datetime import datetime
 from typing import Any
-from collections.abc import Callable
 from uuid import UUID
 
 import pytest
@@ -16,14 +16,12 @@ from pybotx import (
 )
 from tests.system_events.factories import DeleteEventFactory
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__event_delete__succeed(
+def test__event_delete__succeed(
     bot_account: BotAccountWithSecret,
     bot_id: UUID,
     host: str,
@@ -45,7 +43,7 @@ async def test__event_delete__succeed(
     event_deleted: EventDeleted | None = None
 
     @collector.event_deleted
-    async def event_deleted_handler(event: EventDeleted, _: Bot) -> None:
+    def event_deleted_handler(event: EventDeleted, _: Bot) -> None:
         nonlocal event_deleted
         event_deleted = event
         # Drop `raw_command` from asserting
@@ -54,8 +52,8 @@ async def test__event_delete__succeed(
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_raw_bot_command(payload, verify_request=False)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_raw_bot_command(payload, verify_request=False)
 
     # - Assert -
     diff = DeepDiff(

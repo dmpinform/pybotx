@@ -13,14 +13,12 @@ from pybotx import (
     lifespan_wrapper,
 )
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__delete_sticker__sticker_or_pack_not_found_error_raised(
+def test__delete_sticker__sticker_or_pack_not_found_error_raised(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -50,9 +48,9 @@ async def test__delete_sticker__sticker_or_pack_not_found_error_raised(
     build_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(build_bot) as bot:
+    with lifespan_wrapper(build_bot) as bot:
         with pytest.raises(StickerPackOrStickerNotFoundError) as exc:
-            await bot.delete_sticker(
+            bot.delete_sticker(
                 bot_id=bot_id,
                 sticker_id=UUID("6ead1e00-f788-4ce6-9e1a-95abe219414e"),
                 sticker_pack_id=UUID("78f9743c-8b24-4e97-8059-70908604a252"),
@@ -63,7 +61,7 @@ async def test__delete_sticker__sticker_or_pack_not_found_error_raised(
         assert endpoint.called
 
 
-async def test__delete_sticker__succeed(
+def test__delete_sticker__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -88,8 +86,8 @@ async def test__delete_sticker__succeed(
     built_bot = Bot(collectors=[HandlerCollector()], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        await bot.delete_sticker(
+    with lifespan_wrapper(built_bot) as bot:
+        bot.delete_sticker(
             bot_id=bot_id,
             sticker_id=UUID("6ead1e00-f788-4ce6-9e1a-95abe219414e"),
             sticker_pack_id=UUID("78f9743c-8b24-4e97-8059-70908604a252"),

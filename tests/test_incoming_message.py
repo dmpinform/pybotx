@@ -1,7 +1,7 @@
+from collections.abc import Callable
 from datetime import datetime
 from types import SimpleNamespace
 from typing import Any, cast
-from collections.abc import Callable
 from uuid import UUID
 
 import pytest
@@ -33,14 +33,12 @@ from pybotx.models.message.incoming_message import (
 )
 from pybotx.models.message.mentions import BotAPIMentionData
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__async_execute_raw_bot_command__minimally_filled_incoming_message(
+def test__execute_raw_bot_command__minimally_filled_incoming_message(
     bot_account: BotAccountWithSecret,
 ) -> None:
     # - Arrange -
@@ -84,7 +82,7 @@ async def test__async_execute_raw_bot_command__minimally_filled_incoming_message
     incoming_message: IncomingMessage | None = None
 
     @collector.default_message_handler
-    async def default_handler(message: IncomingMessage, bot: Bot) -> None:
+    def default_handler(message: IncomingMessage, bot: Bot) -> None:
         nonlocal incoming_message
         incoming_message = message
         # Drop `raw_command` from asserting
@@ -93,8 +91,8 @@ async def test__async_execute_raw_bot_command__minimally_filled_incoming_message
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_raw_bot_command(payload, verify_request=False)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_raw_bot_command(payload, verify_request=False)
 
     # - Assert -
     assert incoming_message == IncomingMessage(
@@ -136,7 +134,7 @@ async def test__async_execute_raw_bot_command__minimally_filled_incoming_message
     )
 
 
-async def test__async_execute_raw_bot_command__maximum_filled_incoming_message(
+def test__execute_raw_bot_command__maximum_filled_incoming_message(
     datetime_formatter: Callable[[str], datetime],
     bot_account: BotAccountWithSecret,
 ) -> None:
@@ -242,7 +240,7 @@ async def test__async_execute_raw_bot_command__maximum_filled_incoming_message(
     incoming_message: IncomingMessage | None = None
 
     @collector.default_message_handler
-    async def default_handler(message: IncomingMessage, bot: Bot) -> None:
+    def default_handler(message: IncomingMessage, bot: Bot) -> None:
         nonlocal incoming_message
         incoming_message = message
         # Drop `raw_command` from asserting
@@ -251,8 +249,8 @@ async def test__async_execute_raw_bot_command__maximum_filled_incoming_message(
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_raw_bot_command(payload, verify_request=False)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_raw_bot_command(payload, verify_request=False)
 
     # - Assert -
     assert incoming_message == IncomingMessage(
@@ -330,7 +328,7 @@ async def test__async_execute_raw_bot_command__maximum_filled_incoming_message(
     )
 
 
-async def test__async_execute_raw_bot_command__all_mention_types(
+def test__execute_raw_bot_command__all_mention_types(
     bot_account: BotAccountWithSecret,
 ) -> None:
     # - Arrange -
@@ -433,7 +431,7 @@ async def test__async_execute_raw_bot_command__all_mention_types(
     incoming_message: IncomingMessage | None = None
 
     @collector.default_message_handler
-    async def default_handler(message: IncomingMessage, bot: Bot) -> None:
+    def default_handler(message: IncomingMessage, bot: Bot) -> None:
         nonlocal incoming_message
         incoming_message = message
         # Drop `raw_command` from asserting
@@ -442,8 +440,8 @@ async def test__async_execute_raw_bot_command__all_mention_types(
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_raw_bot_command(payload, verify_request=False)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_raw_bot_command(payload, verify_request=False)
 
     # - Assert -
     assert incoming_message
@@ -470,7 +468,7 @@ async def test__async_execute_raw_bot_command__all_mention_types(
     )
 
 
-async def test__async_execute_raw_bot_command__unknown_entity_type(
+def test__execute_raw_bot_command__unknown_entity_type(
     bot_account: BotAccountWithSecret,
     loguru_caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -526,14 +524,14 @@ async def test__async_execute_raw_bot_command__unknown_entity_type(
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_raw_bot_command(payload, verify_request=False)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_raw_bot_command(payload, verify_request=False)
 
     # - Assert -
     assert "Received unknown entity type" in loguru_caplog.text
 
 
-async def test__async_execute_raw_bot_command__unsupported_chat_type_accepted(
+def test__execute_raw_bot_command__unsupported_chat_type_accepted(
     bot_account: BotAccountWithSecret,
 ) -> None:
     # - Arrange -
@@ -577,7 +575,7 @@ async def test__async_execute_raw_bot_command__unsupported_chat_type_accepted(
     incoming_message: IncomingMessage | None = None
 
     @collector.default_message_handler
-    async def default_handler(message: IncomingMessage, bot: Bot) -> None:
+    def default_handler(message: IncomingMessage, bot: Bot) -> None:
         nonlocal incoming_message
         incoming_message = message
         # Drop `raw_command` from asserting
@@ -586,8 +584,8 @@ async def test__async_execute_raw_bot_command__unsupported_chat_type_accepted(
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_raw_bot_command(payload, verify_request=False)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_raw_bot_command(payload, verify_request=False)
 
     # - Assert -
     assert incoming_message
@@ -597,7 +595,7 @@ async def test__async_execute_raw_bot_command__unsupported_chat_type_accepted(
     )
 
 
-async def test__convert_bot_api_mention_to_domain__unsupported_type() -> None:
+def test__convert_bot_api_mention_to_domain__unsupported_type() -> None:
     api_mention = BotAPIMentionData.model_construct(
         mention_type=cast(BotAPIMentionTypes, "unsupported"),
         mention_id=UUID("00000000-0000-0000-0000-000000000000"),
@@ -608,7 +606,7 @@ async def test__convert_bot_api_mention_to_domain__unsupported_type() -> None:
         _convert_bot_api_mention_to_domain(api_mention)
 
 
-async def test__convert_bot_api_entity_to_domain__unsupported_type() -> None:
+def test__convert_bot_api_entity_to_domain__unsupported_type() -> None:
     api_entity = cast(
         BotAPIEntity,
         SimpleNamespace(type="unsupported"),

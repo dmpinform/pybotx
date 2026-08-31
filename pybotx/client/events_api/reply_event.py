@@ -105,10 +105,10 @@ class BotXAPIReplyEventResponsePayload(VerifiedPayloadBaseModel):
 
 
 class ReplyEventMethod(AuthorizedBotXMethod):
-    async def execute(self, payload: BotXAPIReplyEventRequestPayload) -> None:
+    def execute(self, payload: BotXAPIReplyEventRequestPayload) -> None:
         path = "/api/v3/botx/events/reply_event"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "POST",
             self._build_url(path),
             json=payload.jsonable_dict(),

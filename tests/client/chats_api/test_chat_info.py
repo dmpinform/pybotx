@@ -1,7 +1,7 @@
+from collections.abc import Callable, Sequence
 from datetime import datetime as dt
 from http import HTTPStatus
 from typing import Any
-from collections.abc import Callable, Sequence
 from uuid import UUID
 
 import pytest
@@ -14,11 +14,15 @@ from pybotx import (
     ChatTypes,
     UserKinds,
 )
-from tests.testkit import BotXRequest, assert_deep_equal, error_payload, mock_botx, ok_payload
+from tests.testkit import (
+    BotXRequest,
+    assert_deep_equal,
+    error_payload,
+    mock_botx,
+    ok_payload,
+)
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
@@ -48,7 +52,7 @@ REQUEST = BotXRequest(
         ),
     ],
 )
-async def test__chat_info__error_response(
+def test__chat_info__error_response(
     response_status: int,
     response_json: dict[str, Any],
     expected_exc: type[Exception],
@@ -62,12 +66,11 @@ async def test__chat_info__error_response(
     endpoint = mock_botx(respx_mock, host, REQUEST, response_json, response_status)
 
     # - Act -
-    async with bot_factory() as bot:
-        with pytest.raises(expected_exc) as exc:
-            await bot.chat_info(
-                bot_id=bot_id,
-                chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
-            )
+    with bot_factory() as bot, pytest.raises(expected_exc) as exc:
+        bot.chat_info(
+            bot_id=bot_id,
+            chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
+        )
 
     # - Assert -
     for fragment in expected_fragments:
@@ -75,7 +78,7 @@ async def test__chat_info__error_response(
     assert endpoint.called
 
 
-async def test__chat_info__succeed(
+def test__chat_info__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -114,8 +117,8 @@ async def test__chat_info__succeed(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        chat_info = await bot.chat_info(
+    with bot_factory() as bot:
+        chat_info = bot.chat_info(
             bot_id=bot_id,
             chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
         )
@@ -149,7 +152,7 @@ async def test__chat_info__succeed(
     assert endpoint.called
 
 
-async def test__chat_info__succeed_voex_call(
+def test__chat_info__succeed_voex_call(
         respx_mock: MockRouter,
         host: str,
         bot_id: UUID,
@@ -188,8 +191,8 @@ async def test__chat_info__succeed_voex_call(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        chat_info = await bot.chat_info(
+    with bot_factory() as bot:
+        chat_info = bot.chat_info(
             bot_id=bot_id,
             chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
         )
@@ -223,7 +226,7 @@ async def test__chat_info__succeed_voex_call(
     assert endpoint.called
 
 
-async def test__chat_info__notes_chat_type_mapped_to_personal_chat(
+def test__chat_info__notes_chat_type_mapped_to_personal_chat(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -257,8 +260,8 @@ async def test__chat_info__notes_chat_type_mapped_to_personal_chat(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        chat_info = await bot.chat_info(
+    with bot_factory() as bot:
+        chat_info = bot.chat_info(
             bot_id=bot_id,
             chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
         )
@@ -287,7 +290,7 @@ async def test__chat_info__notes_chat_type_mapped_to_personal_chat(
     assert endpoint.called
 
 
-async def test__chat_info__skipped_members(
+def test__chat_info__skipped_members(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -332,8 +335,8 @@ async def test__chat_info__skipped_members(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        chat_info = await bot.chat_info(
+    with bot_factory() as bot:
+        chat_info = bot.chat_info(
             bot_id=bot_id,
             chat_id=UUID("054af49e-5e18-4dca-ad73-4f96b6de63fa"),
         )
@@ -367,7 +370,7 @@ async def test__chat_info__skipped_members(
     assert endpoint.called
 
 
-async def test__open_channel_info__succeed(
+def test__open_channel_info__succeed(
     respx_mock: MockRouter,
     host: str,
     bot_id: UUID,
@@ -413,8 +416,8 @@ async def test__open_channel_info__succeed(
     )
 
     # - Act -
-    async with bot_factory() as bot:
-        chat_info = await bot.chat_info(
+    with bot_factory() as bot:
+        chat_info = bot.chat_info(
             bot_id=bot_id,
             chat_id=UUID("e53d5080-68f7-5050-bb4f-005efd375612"),
         )

@@ -1,7 +1,8 @@
 from typing import Any
 
 from deepdiff import DeepDiff
-from hypothesis import given, strategies as st
+from hypothesis import given
+from hypothesis import strategies as st
 
 from pybotx.missing import Undefined
 from pybotx.models.api_base import PayloadBaseModel

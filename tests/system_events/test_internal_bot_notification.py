@@ -14,14 +14,12 @@ from pybotx import (
     lifespan_wrapper,
 )
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.mock_authorization,
+pytestmark = [pytest.mark.mock_authorization,
     pytest.mark.usefixtures("respx_mock"),
 ]
 
 
-async def test__internal_bot_notification__succeed(
+def test__internal_bot_notification__succeed(
     bot_account: BotAccountWithSecret,
 ) -> None:
     # - Arrange -
@@ -71,7 +69,7 @@ async def test__internal_bot_notification__succeed(
     internal_bot_notification: InternalBotNotificationEvent | None = None
 
     @collector.internal_bot_notification
-    async def internal_bot_notification_handler(
+    def internal_bot_notification_handler(
         event: InternalBotNotificationEvent,
         bot: Bot,
     ) -> None:
@@ -83,8 +81,8 @@ async def test__internal_bot_notification__succeed(
     built_bot = Bot(collectors=[collector], bot_accounts=[bot_account])
 
     # - Act -
-    async with lifespan_wrapper(built_bot) as bot:
-        bot.async_execute_raw_bot_command(payload, verify_request=False)
+    with lifespan_wrapper(built_bot) as bot:
+        bot.execute_raw_bot_command(payload, verify_request=False)
 
     # - Assert -
     assert internal_bot_notification == InternalBotNotificationEvent(

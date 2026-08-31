@@ -35,7 +35,7 @@ class EditStickerPackMethod(AuthorizedBotXMethod):
         404: response_exception_thrower(StickerPackOrStickerNotFoundError),
     }
 
-    async def execute(
+    def execute(
         self,
         payload: BotXAPIEditStickerPackRequestPayload,
     ) -> BotXAPIGetStickerPackResponsePayload:
@@ -44,7 +44,7 @@ class EditStickerPackMethod(AuthorizedBotXMethod):
 
         path = f"/api/v3/botx/stickers/packs/{sticker_pack_id}"
 
-        response = await self._botx_method_call(
+        response = self._botx_method_call(
             "PUT",
             self._build_url(path),
             json=jsonable_dict,
