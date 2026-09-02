@@ -1,674 +1,292 @@
 # pybotx
 
-*Библиотека для создания чат-ботов и SmartApps для мессенджера eXpress*
+Синхронная Python-библиотека для работы с BotX API.
 
-[![PyPI version](https://badge.fury.io/py/pybotx.svg)](https://badge.fury.io/py/pybotx)
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pybotx)
-[![Coverage](https://codecov.io/gh/ExpressApp/pybotx/branch/master/graph/badge.svg)](https://codecov.io/gh/ExpressApp/pybotx/branch/master)
-[![Code style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
-
-
-## Особенности
-
-* Простая для использования
-* Поддерживает коллбэки BotX
-* Легко интегрируется с веб-фреймворками
-* Полное покрытие тестами
-* Полное покрытие аннотациями типов
-
+Библиотека отвечает за три вещи: разбор входящих команд, формирование исходящих запросов к BotX и верификацию подписей. Маршрутизация, обработка ошибок и управление конкурентностью остаются на стороне приложения.
 
 ## Установка
 
-Используя `poetry`:
-
-```bash
-poetry add pybotx
+```
+pip install pybotx
 ```
 
-**Предупреждение:** Данный проект находится в активной разработке (`0.y.z`) и
-его API может быть изменён при повышении минорной версии.
+## Концепция
 
+BotX общается с ботом через три HTTP-эндпоинта:
 
-## Информация о мессенджере eXpress и платформе BotX
+| Метод | Путь | Назначение |
+|-------|------|------------|
+| `POST` | `/command` | Входящие сообщения и системные события |
+| `GET` | `/status` | Меню бота (список команд) |
+| `POST` | `/notification/callback` | Async-результаты от BotX |
 
-Документацию по мессенджеру (включая руководство пользователя и администратора)
-можно найти на [официальном сайте](https://express.ms/).
+Приложение регистрирует эти эндпоинты в любом WSGI/ASGI-фреймворке и делегирует обработку объекту `Bot`.
 
-Перед тем, как продолжать знакомство с библиотекой `pybotx`,
-советуем прочитать данные статьи: Что такое [чат-боты](https://docs.express.ms/chatbots/developer-guide/#%D1%87%D0%B0%D1%82-%D0%B1%D0%BE%D1%82-%D0%B8-smartapp)
-и [SmartApp](https://docs.express.ms/smartapps/developer-guide/)
-и [Взаимодействие с Bot API и BotX API](https://docs.express.ms/chatbots/developer-guide/api/).
-В этих статьях находятся исчерпывающие примеры работы с платформой, которые
-легко повторить, используя `pybotx`.
+## Быстрый старт
 
-Также не будет лишним ознакомиться с [документацией по плаформе BotX
-](https://hackmd.ccsteam.ru/s/botx_platform).
-
-
-## Примеры готовых проектов на базе pybotx
-
-* [Next Feature Bot](https://github.com/ExpressApp/next-feature-bot) - бот,
-  используемый для тестирования функционала платформы BotX.
-* [ToDo Bot](https://github.com/ExpressApp/todo-bot) - бот для ведения списка
-  дел.
-* [Weather SmartApp](https://github.com/ExpressApp/weather-smartapp) -
-  приложение для просмотра погоды.
-
-
-## Минимальный пример бота (интеграция с FastAPI)
+### 1. Создание бота
 
 ```python
-from http import HTTPStatus
 from uuid import UUID
-
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
-
-# В этом и последующих примерах импорт из `pybotx` будет производиться
-# через звёздочку для краткости. Однако, это не является хорошей практикой.
-from pybotx import *
-
-collector = HandlerCollector()
-
-
-@collector.command("/echo", description="Send back the received message body")
-def echo_handler(message: IncomingMessage, bot: Bot) -> None:
-    bot.answer_message(message.body)
-
-
-# Сюда можно добавлять свои обработчики команд
-# или копировать примеры кода, расположенные ниже.
-
+from pybotx import Bot, BotAccountWithSecret, BotMenu
 
 bot = Bot(
-    collectors=[collector],
     bot_accounts=[
         BotAccountWithSecret(
-            # Не забудьте заменить эти учётные данные на настоящие,
-            # когда создадите бота в панели администратора.
-            id=UUID("123e4567-e89b-12d3-a456-426655440000"),
+            id=UUID("ffffffff-ffff-ffff-ffff-ffffffffffff"),
             cts_url="https://cts.example.com",
-            secret_key="e29b417773f2feab9dac143ee3da20c5",
-        ),
+            secret_key="your-secret-key",
+        )
     ],
+    bot_menu=BotMenu({
+        "/echo": "Вернуть сообщение обратно",
+        "/help": "Список команд",
+    }),
 )
-
-app = FastAPI()
-app.add_event_handler("startup", bot.startup)
-app.add_event_handler("shutdown", bot.shutdown)
-
-
-# На этот эндпоинт приходят команды BotX
-# (сообщения и системные события).
-@app.post("/command")
-async def command_handler(request: Request) -> JSONResponse:
-    bot.execute_raw_bot_command(
-        await request.json(),
-        request_headers=request.headers,
-    )
-    return JSONResponse(
-        build_command_accepted_response(),
-        status_code=HTTPStatus.ACCEPTED,
-    )
-
-
-# На этот эндпоинт приходят события BotX для SmartApps, обрабатываемые синхронно.
-@app.post("/smartapps/request")
-async def sync_smartapp_event_handler(request: Request) -> JSONResponse:
-    response = bot.sync_execute_raw_smartapp_event(
-        await request.json(),
-        request_headers=request.headers,
-    )
-    return JSONResponse(response.jsonable_dict(), status_code=HTTPStatus.OK)
-
-
-# К этому эндпоинту BotX обращается, чтобы узнать
-# доступность бота и его список команд.
-@app.get("/status")
-async def status_handler(request: Request) -> JSONResponse:
-    status = bot.raw_get_status(
-        dict(request.query_params),
-        request_headers=request.headers,
-    )
-    return JSONResponse(status)
-
-
-# На этот эндпоинт приходят коллбэки с результатами
-# выполнения асинхронных методов в BotX.
-@app.post("/notification/callback")
-async def callback_handler(request: Request) -> JSONResponse:
-    bot.set_raw_botx_method_result(
-        await request.json(),
-        verify_request=False,
-    )
-    return JSONResponse(
-        build_command_accepted_response(),
-        status_code=HTTPStatus.ACCEPTED,
-    )
 ```
 
-## Примеры
+### 2. Жизненный цикл
 
+```python
+bot.startup()   # получить токены при BotXAuthVersion.V1
+# ... сервер обрабатывает запросы ...
+bot.shutdown()  # закрыть HTTP-клиент, отменить ожидание колбэков
+```
 
-### Получение сообщений
+### 3. Разбор входящей команды
 
-*([подробное описание функции](
-https://docs.express.ms/chatbots/developer-guide/api/bot-api/command/))*
+`parse_bot_command` принимает тело POST-запроса и заголовки, проверяет подпись и возвращает типизированный объект.
+
+```python
+from pybotx import Bot, IncomingMessage, UnverifiedRequestError
+
+bot_command = bot.parse_bot_command(
+    request.json,
+    request_headers=dict(request.headers),
+)
+
+if isinstance(bot_command, IncomingMessage):
+    print(bot_command.body)      # "/echo hello"
+    print(bot_command.argument)  # "hello"
+    print(bot_command.bot.id)    # UUID бота
+    print(bot_command.chat.id)   # UUID чата
+    print(bot_command.sender.huid)
+```
+
+При невалидной подписи поднимается `UnverifiedRequestError`.
+
+### 4. Статус-эндпоинт
+
+```python
+status = bot.get_raw_status(
+    dict(request.query_params),
+    request_headers=dict(request.headers),
+)
+# status — готовый dict, сериализуется в JSON
+```
+
+### 5. Колбэк-эндпоинт
+
+BotX присылает результат async-метода (например, `send_message`) отдельным POST-запросом. `parse_callback` регистрирует его в менеджере колбэков — поток, вызвавший `send_message`, разблокируется.
+
+```python
+bot.parse_callback(
+    request.json,
+    request_headers=dict(request.headers),
+)
+```
+
+### 6. Отправка сообщения
+
 ```python
 from uuid import UUID
 
-from pybotx import *
-
-ADMIN_HUIDS = (UUID("123e4567-e89b-12d3-a456-426614174000"),)
-
-collector = HandlerCollector()
-
-
-@collector.command("/visible", description="Visible command")
-def visible_handler(_: IncomingMessage, bot: Bot) -> None:
-    # Обработчик команды бота. Команда видимая, поэтому описание
-    # является обязательным.
-    print("Hello from `/visible` handler")
-
-
-@collector.command("/_invisible", visible=False)
-def invisible_handler(_: IncomingMessage, bot: Bot) -> None:
-    # Невидимая команда - не отображается в списке команд бота
-    # и не нуждается в описании.
-    print("Hello from `/invisible` handler")
-
-
-def is_admin(status_recipient: StatusRecipient, bot: Bot) -> bool:
-    return status_recipient.huid in ADMIN_HUIDS
-
-
-@collector.command("/admin-command", visible=is_admin)
-def admin_command_handler(_: IncomingMessage, bot: Bot) -> None:
-    # Команда показывается только если пользователь является админом.
-    # Список команд запрашивается при открытии чата в приложении.
-    print("Hello from `/admin-command` handler")
-
-
-@collector.default_message_handler
-def default_handler(_: IncomingMessage, bot: Bot) -> None:
-    # Если команда не была найдена, вызывается `default_message_handler`,
-    # если он определён. Такой обработчик может быть только один.
-    print("Hello from default handler")
-```
-
-
-### Получение системных событий
-
-*([подробное описание функции](
-https://docs.express.ms/chatbots/developer-guide/api/bot-api/command/#%D1%81%D0%B8%D1%81%D1%82%D0%B5%D0%BC%D0%BD%D1%8B%D0%B5-%D0%BA%D0%BE%D0%BC%D0%B0%D0%BD%D0%B4%D1%8B))*
-```python
-from pybotx import *
-
-collector = HandlerCollector()
-
-
-@collector.chat_created
-def chat_created_handler(event: ChatCreatedEvent, bot: Bot) -> None:
-    # Работа с событиями производится с помощью специальных обработчиков.
-    # На каждое событие можно объявить только один такой обработчик.
-    print(f"Got `chat_created` event: {event}")
-
-
-@collector.smartapp_event
-def smartapp_event_handler(event: SmartAppEvent, bot: Bot) -> None:
-    print(f"Got `smartapp_event` event: {event}")
-```
-
-
-### Получение синхронных SmartApp событий
-
-```python
-from pybotx import *
-
-collector = HandlerCollector()
-
-
-# Обработчик синхронных Smartapp событий, приходящих на эндпоинт `/smartapps/request`
-@collector.sync_smartapp_event
-def handle_sync_smartapp_event(
-    event: SmartAppEvent, bot: Bot,
-) -> BotAPISyncSmartAppEventResultResponse:
-    print(f"Got sync smartapp event: {event}")
-    return BotAPISyncSmartAppEventResultResponse.from_domain(
-        data={},
-        files=[],
-    )
-```
-
-
-### Middlewares
-
-*(Этот функционал относится исключительно к `pybotx`)*
-
-```python
-from httpx import Client
-
-from pybotx import *
-
-collector = HandlerCollector()
-
-
-def custom_api_client_middleware(
-    message: IncomingMessage,
-    bot: Bot,
-    call_next: IncomingMessageHandlerFunc,
-) -> None:
-    # До вызова `call_next` (обязателен в каждой миддлвари) располагается
-    # код, который выполняется до того, как сообщение дойдёт до
-    # своего обработчика.
-    client = Client()
-
-    # У сообщения есть объект состояния, в который миддлвари могут добавлять
-    # необходимые данные.
-    message.state.client = client
-
-    call_next(message, bot)
-
-    # После вызова `call_next` выполняется код, когда обработчик уже
-    # завершил свою работу.
-    client.close()
-
-
-@collector.command(
-    "/fetch-resource",
-    description="Fetch resource from passed URL",
-    middlewares=[custom_api_client_middleware],
+bot.send_message(
+    bot_id=UUID("ffffffff-ffff-ffff-ffff-ffffffffffff"),
+    chat_id=UUID("30dc1980-643a-00ad-37fc-7cc10d74e935"),
+    body="Привет!",
 )
-def fetch_resource_handler(message: IncomingMessage, bot: Bot) -> None:
-    client = message.state.client
-    response = client.get(message.argument)
-    print(response.status_code)
 ```
 
-### Сборщики обработчиков
+По умолчанию вызов блокируется до получения колбэка от BotX (`wait_callback=True`). Для серверов BotX ≥ 3.58 можно использовать `send_message_sync` — прямой ответ без колбэка.
 
-*(Этот функционал относится исключительно к `pybotx`)*
+## Паттерны интеграции
+
+### Паттерн 1 — Контроллер
+
+Подходит, когда бот — основной пользовательский интерфейс приложения. Контроллер владеет ботом и юзкейсами, маршрутизирует команды вручную.
 
 ```python
-from uuid import UUID, uuid4
+# bot_controller.py
+from pybotx import Bot, IncomingMessage
+from myapp.usecases import EchoUseCase
 
-from pybotx import *
+class BotController:
+    def __init__(self, bot: Bot, echo_uc: EchoUseCase) -> None:
+        self._bot = bot
+        self._echo_uc = echo_uc
 
-ADMIN_HUIDS = (UUID("123e4567-e89b-12d3-a456-426614174000"),)
+    def dispatch(self, message: IncomingMessage) -> None:
+        command = message.body.split()[0]
+        if command == "/echo":
+            text = self._echo_uc.execute(message.argument)
+            self._bot.send_message(
+                bot_id=message.bot.id,
+                chat_id=message.chat.id,
+                body=text,
+            )
 
-
-def request_id_middleware(
-    message: IncomingMessage,
-    bot: Bot,
-    call_next: IncomingMessageHandlerFunc,
-) -> None:
-    message.state.request_id = uuid4()
-    call_next(message, bot)
-
-
-def ensure_admin_middleware(
-    message: IncomingMessage,
-    bot: Bot,
-    call_next: IncomingMessageHandlerFunc,
-) -> None:
-    if message.sender.huid not in ADMIN_HUIDS:
-        bot.answer_message("You are not admin")
-        return
-
-    call_next(message, bot)
-
-
-# Для того чтобы добавить новый обработчик команды,
-# необходимо создать экземпляр класса `HandlerCollector`.
-# Позже этот сборщик будет использован при создании бота.
-main_collector = HandlerCollector(middlewares=[request_id_middleware])
-
-# У сборщиков (как у обработчиков), могут быть собственные миддлвари.
-# Они автоматически применяются ко всем обработчикам данного сборщика.
-admin_collector = HandlerCollector(middlewares=[ensure_admin_middleware])
-
-# Сборщики можно включать друг в друга. В данном примере у
-# `admin_collector` будут две миддлвари. Первая - его собственная,
-# вторая - полученная при включении в `main_collector`.
-main_collector.include(admin_collector)
+# deps.py
+bot = Bot(bot_accounts=[...])
+controller = BotController(bot=bot, echo_uc=EchoUseCase())
 ```
 
+### Паттерн 2 — Наблюдатель
 
-### Отправка сообщения
+Подходит, когда бот — канал доставки уведомлений от фоновых процессов. Юзкейс не знает о боте; бот подписывается на события через колбэк.
 
-*([подробное описание функции](
-https://docs.express.ms/chatbots/developer-guide/development-and-debugging/examples/#%D0%BE%D1%82%D0%BF%D1%80%D0%B0%D0%B2%D0%BA%D0%B0-%D1%81%D0%BE%D0%BE%D0%B1%D1%89%D0%B5%D0%BD%D0%B8%D1%8F))*
 ```python
+# usecases/notify.py
+from collections.abc import Callable
+
+class NotifyUseCase:
+    def __init__(self) -> None:
+        self._handlers: list[Callable[[str], None]] = []
+
+    def subscribe(self, handler: Callable[[str], None]) -> None:
+        self._handlers.append(handler)
+
+    def execute(self, text: str) -> None:
+        for handler in self._handlers:
+            handler(text)
+
+# deps.py
 from uuid import UUID
+from pybotx import Bot, BotAccountWithSecret
 
-from pybotx import *
+BOT_ID = UUID("ffffffff-ffff-ffff-ffff-ffffffffffff")
+NOTIFY_CHAT_ID = UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 
-collector = HandlerCollector()
+bot = Bot(bot_accounts=[...])
+notify_uc = NotifyUseCase()
 
-
-@collector.command("/answer", description="Answer to sender")
-def answer_to_sender_handler(message: IncomingMessage, bot: Bot) -> None:
-    # Т.к. нам известно, откуда пришло сообщение, у `pybotx` есть необходимый
-    # контекст для отправки ответа.
-    bot.answer_message("Text")
-
-
-@collector.command("/send", description="Send message to specified chat")
-def send_message_handler(message: IncomingMessage, bot: Bot) -> None:
-    try:
-        chat_id = UUID(message.argument)
-    except ValueError:
-        bot.answer_message("Invalid chat id")
-        return
-
-    # В данном случае нас интересует не ответ, а отправка сообщения
-    # в другой чат. Чат должен существовать и бот должен быть в нём.
-    try:
-        bot.send_message(
-            bot_id=message.bot.id,
-            chat_id=chat_id,
-            body="Text",
-        )
-    except Exception as exc:
-        bot.answer_message(f"Error: {exc}")
-        return
-
-    bot.answer_message("Message was send")
-
-
-@collector.command("/prebuild-answer", description="Answer with prebuild message")
-def prebuild_answer_handler(message: IncomingMessage, bot: Bot) -> None:
-    # С помощью OutgoingMessage можно выносить логику
-    # формирования ответов в другие модули.
-    answer = OutgoingMessage(
-        bot_id=message.bot.id,
-        chat_id=message.chat.id,
-        body="Text",
-    )
-    bot.send(message=answer)
-```
-
-
-#### Отправка сообщения с кнопками
-
-*([подробное описание функции](
-https://docs.express.ms/chatbots/developer-guide/development-and-debugging/examples/#%D0%BE%D1%82%D0%BF%D1%80%D0%B0%D0%B2%D0%BA%D0%B0-%D1%81%D0%BE%D0%BE%D0%B1%D1%89%D0%B5%D0%BD%D0%B8%D1%8F-%D1%81-%D0%BA%D0%BD%D0%BE%D0%BF%D0%BA%D0%B0%D0%BC%D0%B8))*
-```python
-from pybotx import *
-
-collector = HandlerCollector()
-
-
-@collector.command("/bubbles", description="Send buttons")
-def bubbles_handler(message: IncomingMessage, bot: Bot) -> None:
-    # Если вам нужна клавиатура под полем для ввода сообщения,
-    # используйте `KeyboardMarkup`. Этот класс имеет те же методы,
-    # что и `BubbleMarkup`.
-    bubbles = BubbleMarkup()
-    bubbles.add_button(
-        command="/choose",
-        label="Red",
-        data={"pill": "red"},
-        background_color="#FF0000",
-    )
-    bubbles.add_button(
-        command="/choose",
-        label="Blue",
-        data={"pill": "blue"},
-        background_color="#0000FF",
-        new_row=False,
-    )
-
-    # В кнопку можно добавит ссылку на ресурс,
-    # для этого нужно добавить url в аргумент `link`, а `command` оставить пустым,
-    # `alert` добавляется в окно подтверждения при переходе по ссылке.
-    bubbles.add_button(
-        label="Bubble with link",
-        alert="alert text",
-        link="https://example.com",
-    )
-
-    bot.answer_message(
-        "The time has come to make a choice, Mr. Anderson:",
-        bubbles=bubbles,
-    )
-```
-
-
-#### Упоминание пользователя
-
-*([подробное описание функции](
-https://docs.express.ms/chatbots/developer-guide/development-and-debugging/examples/#%D1%83%D0%BF%D0%BE%D0%BC%D0%B8%D0%BD%D0%B0%D0%BD%D0%B8%D0%B5-%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8F))*
-```python
-from pybotx import *
-
-collector = HandlerCollector()
-
-
-@collector.command("/send-contact", description="Send author's contact")
-def send_contact_handler(message: IncomingMessage, bot: Bot) -> None:
-    contact = MentionBuilder.contact(message.sender.huid)
-    bot.answer_message(f"Author is {contact}")
-
-
-@collector.command("/echo-contacts", description="Send back recieved contacts")
-def echo_contact_handler(message: IncomingMessage, bot: Bot) -> None:
-    if not (contacts := message.mentions.contacts):
-        bot.answer_message("Please send at least one contact")
-        return
-
-    answer = ", ".join(map(str, contacts))
-    bot.answer_message(answer)
-```
-
-
-#### Отправка файла в сообщении
-
-*([подробное описание функции](
-https://docs.express.ms/chatbots/developer-guide/development-and-debugging/examples/#%D0%BE%D1%82%D0%BF%D1%80%D0%B0%D0%B2%D0%BA%D0%B0-%D1%84%D0%B0%D0%B9%D0%BB%D0%B0-%D0%B2-%D1%81%D0%BE%D0%BE%D0%B1%D1%89%D0%B5%D0%BD%D0%B8%D0%B8))*
-```python
-from tempfile import NamedTemporaryFile
-
-from pybotx import *
-
-collector = HandlerCollector()
-
-
-@collector.command("/send-file", description="Send file")
-def send_file_handler(message: IncomingMessage, bot: Bot) -> None:
-    # Для создания файла используется file-like object
-    # с поддержкой файловых операций.
-    with NamedTemporaryFile("wb+") as buffer:
-        buffer.write(b"Hello, world!\n")
-        buffer.seek(0)
-
-        file = OutgoingAttachment.from_buffer(buffer, "test.txt")
-
-    bot.answer_message("Attached file", file=file)
-
-
-@collector.command("/echo-file", description="Echo file")
-def echo_file_handler(message: IncomingMessage, bot: Bot) -> None:
-    if not (attached_file := message.file):
-        bot.answer_message("Attached file is required")
-        return
-
-    bot.answer_message("", file=attached_file)
-```
-
-### Редактирование сообщения
-
-*([подробное описание функции](
-https://docs.express.ms/chatbots/developer-guide/development-and-debugging/examples/#%D1%80%D0%B5%D0%B4%D0%B0%D0%BA%D1%82%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5-%D1%81%D0%BE%D0%BE%D0%B1%D1%89%D0%B5%D0%BD%D0%B8%D0%B9))*
-```python
-from pybotx import *
-
-collector = HandlerCollector()
-
-
-@collector.command("/increment", description="Self-updating widget")
-def increment_handler(message: IncomingMessage, bot: Bot) -> None:
-    if message.source_sync_id:  # ID сообщения, в котором была нажата кнопка.
-        current_value = message.data["current_value"]
-        next_value = current_value + 1
-    else:
-        current_value = 0
-        next_value = 1
-
-    answer_text = f"Counter: {current_value}"
-    bubbles = BubbleMarkup()
-    bubbles.add_button(
-        command="/increment",
-        label="+",
-        data={"current_value": next_value},
-    )
-
-    if message.source_sync_id:
-        bot.edit_message(
-            bot_id=message.bot.id,
-            sync_id=message.source_sync_id,
-            body=answer_text,
-            bubbles=bubbles,
-        )
-    else:
-        bot.answer_message(answer_text, bubbles=bubbles)
-```
-
-### Удаление сообщения
-
-*([подробное описание функции](
-https://hackmd.ccsteam.ru/s/E9MPeOxjP#%D0%A3%D0%B4%D0%B0%D0%BB%D0%B5%D0%BD%D0%B8%D0%B5-%D1%81%D0%BE%D0%BE%D0%B1%D1%89%D0%B5%D0%BD%D0%B8%D1%8F))*
-```python
-from pybotx import *
-
-collector = HandlerCollector()
-
-
-@collector.command("/deleted-message", description="Self-deleted message")
-def deleted_message_handler(message: IncomingMessage, bot: Bot) -> None:
-    if message.source_sync_id:  # ID сообщения, в котором была нажата кнопка.
-        bot.delete_message(
-            bot_id=message.bot.id,
-            sync_id=message.source_sync_id,
-        )
-        return
-
-    bubbles = BubbleMarkup()
-    bubbles.add_button(
-        command="/deleted-message",
-        label="Delete",
-    )
-
-    bot.answer_message("Self-deleted message", bubbles=bubbles)
-```
-
-
-### Обработчики ошибок
-
-*(Этот функционал относится исключительно к `pybotx`)*
-
-```python
-from loguru import logger
-
-from pybotx import *
-
-
-def internal_error_handler(
-    message: IncomingMessage,
-    bot: Bot,
-    exc: Exception,
-) -> None:
-    logger.exception("Internal error:")
-
-    bot.answer_message(
-        "**Error:** internal error, please contact your system administrator",
-    )
-
-
-# Для перехвата исключений существуют специальные обработчики.
-# Бот принимает словарь из типов исключений и их обработчиков.
-bot = Bot(
-    collectors=[],
-    bot_accounts=[],
-    exception_handlers={Exception: internal_error_handler},
+notify_uc.subscribe(
+    lambda text: bot.send_message(bot_id=BOT_ID, chat_id=NOTIFY_CHAT_ID, body=text)
 )
 ```
 
-### Создание чата
+Теперь любой сервис вызывает `notify_uc.execute("текст")` — сообщение уходит в BotX-чат.
 
-*([подробное описание функции](
-https://docs.express.ms/chatbots/developer-guide/development-and-debugging/examples/#%D1%81%D0%BE%D0%B7%D0%B4%D0%B0%D0%BD%D0%B8%D0%B5-%D1%87%D0%B0%D1%82%D0%B0))*
-```python
-from pybotx import *
+## Полный пример (Falcon + Waitress)
 
-collector = HandlerCollector()
+Минимальное рабочее приложение находится в `example/app/`. Запуск:
 
-
-@collector.command("/create-group-chat", description="Create group chat")
-def create_group_chat_handler(message: IncomingMessage, bot: Bot) -> None:
-    if not (contacts := message.mentions.contacts):
-        bot.answer_message("Please send at least one contact")
-        return
-
-    try:
-        chat_id = bot.create_chat(
-            bot_id=message.bot.id,
-            name="New group chat",
-            chat_type=ChatTypes.GROUP_CHAT,
-            huids=[contact.entity_id for contact in contacts],
-        )
-    except (ChatCreationProhibitedError, ChatCreationError) as exc:
-        bot.answer_message(str(exc))
-        return
-
-    chat_mention = MentionBuilder.chat(chat_id)
-    bot.answer_message(f"Chat created: {chat_mention}")
+```
+python -m example.app.main
 ```
 
-### Поиск пользователей
+### `example/app/resources.py`
 
-*([подробное описание функции](
-https://docs.express.ms/chatbots/developer-guide/development-and-debugging/examples/#%D0%BF%D0%BE%D0%B8%D1%81%D0%BA-%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8F))*
 ```python
-import dataclasses
+import falcon
+from pybotx import IncomingMessage, UnverifiedRequestError
+from pybotx.bot.api.responses.command_accepted import build_command_accepted_response
+from pybotx.bot.api.responses.unverified_request import build_unverified_request_response
+from example.app.deps import bot, controller
 
-from pybotx import *
+class CommandResource:
+    def on_post(self, req: falcon.Request, resp: falcon.Response) -> None:
+        try:
+            bot_command = bot.parse_bot_command(
+                req.media,
+                request_headers=dict(req.headers),
+            )
+        except UnverifiedRequestError:
+            resp.status = falcon.HTTP_401
+            resp.media = build_unverified_request_response()
+            return
 
-collector = HandlerCollector()
+        if isinstance(bot_command, IncomingMessage):
+            controller.dispatch(bot_command)
 
+        resp.media = build_command_accepted_response()
 
-@collector.command("/my-info", description="Get info of current user")
-def search_user_handler(message: IncomingMessage, bot: Bot) -> None:
-    try:
-        user_info = bot.search_user_by_huid(
-            bot_id=message.bot.id,
-            huid=message.sender.huid,
-        )
-    except UserNotFoundError:  # Если пользователь и бот находятся на разных CTS
-        bot.answer_message("User not found. Maybe you are on a different cts.")
-        return
+class StatusResource:
+    def on_get(self, req: falcon.Request, resp: falcon.Response) -> None:
+        try:
+            resp.media = bot.get_raw_status(
+                dict(req.params),
+                request_headers=dict(req.headers),
+            )
+        except UnverifiedRequestError:
+            resp.status = falcon.HTTP_401
+            resp.media = build_unverified_request_response()
 
-    bot.answer_message(f"Your info:\n{dataclasses.asdict(user_info)}\n")
+class CallbackResource:
+    def on_post(self, req: falcon.Request, resp: falcon.Response) -> None:
+        try:
+            bot.parse_callback(req.media, request_headers=dict(req.headers))
+        except UnverifiedRequestError:
+            resp.status = falcon.HTTP_401
+            resp.media = build_unverified_request_response()
+            return
+        resp.media = {"status": "ok"}
 ```
 
-### Получение списка пользователей
+## Системные события
 
-*([подробное описание функции](
-https://docs.express.ms/chatbots/developer-guide/development-and-debugging/examples/#%D0%BF%D0%BE%D0%BB%D1%83%D1%87%D0%B5%D0%BD%D0%B8%D0%B5-%D1%81%D0%BF%D0%B8%D1%81%D0%BA%D0%B0-%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D0%B5%D0%B9-%D0%BD%D0%B0-cts))*
+Помимо `IncomingMessage` `parse_bot_command` может вернуть системное событие. Обработка через `isinstance`:
+
 ```python
-from pybotx import *
+from pybotx import (
+    AddedToChatEvent,
+    ChatCreatedEvent,
+    DeletedFromChatEvent,
+    IncomingMessage,
+)
 
-collector = HandlerCollector()
+bot_command = bot.parse_bot_command(raw, request_headers=headers)
 
-
-@collector.command("/get_users_list", description="Get a list of users")
-def users_list_handler(message: IncomingMessage, bot: Bot) -> None:
-    with bot.users_as_csv(
-        bot_id=message.bot.id,
-        cts_user=True,
-        unregistered=False,
-        botx=False,
-    ) as users:
-        for user in users:
-            print(user)
+if isinstance(bot_command, IncomingMessage):
+    controller.dispatch(bot_command)
+elif isinstance(bot_command, AddedToChatEvent):
+    on_added_to_chat(bot_command)
+elif isinstance(bot_command, ChatCreatedEvent):
+    on_chat_created(bot_command)
 ```
+
+## Конфигурация `Bot`
+
+| Параметр | Тип | По умолчанию | Описание |
+|----------|-----|-------------|----------|
+| `bot_accounts` | `Sequence[BotAccountWithSecret]` | — | Список аккаунтов бота |
+| `bot_menu` | `BotMenu \| None` | `BotMenu({})` | Меню команд для `/status` |
+| `httpx_client` | `httpx.Client \| None` | новый клиент | Кастомный HTTP-клиент |
+| `default_callback_timeout` | `float` | 60 с | Таймаут ожидания колбэка |
+| `callback_repo` | `CallbackRepoProto \| None` | in-memory | Хранилище колбэков |
+| `auth_version` | `BotXAuthVersion` | `V2` | Версия аутентификации |
+
+## Аутентификация
+
+| Версия | Описание |
+|--------|----------|
+| `BotXAuthVersion.V2` | JWT подписывается секретом бота, `iss` = UUID бота. Токен не нужен. |
+| `BotXAuthVersion.V1` | Токен получается от BotX-сервера при `startup()`. |
+
+## Основные методы отправки
+
+```python
+# Сообщение в чат (async, ждёт колбэк)
+bot.send_message(bot_id=..., chat_id=..., body="текст")
+
+# Сообщение без колбэка (BotX >= 3.58)
+bot.send_message_sync(bot_id=..., chat_id=..., body="текст")
+
+# Редактирование сообщения
+bot.edit_message(bot_id=..., sync_id=..., body="новый текст")
+
+# Ответ на сообщение
+bot.reply(bot_id=..., sync_id=..., body="ответ")
+```
+
+Полный список методов API: `send_message`, `send_message_sync`, `edit_message`, `reply`, `create_chat`, `add_user`, `remove_user`, `chat_info`, `upload_file`, `download_file`, `get_user_by_huid` и другие — см. `pybotx/bot/bot.py`.

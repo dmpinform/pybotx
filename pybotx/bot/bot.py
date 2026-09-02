@@ -1,10 +1,8 @@
 import csv
-import threading
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from contextlib import ExitStack, contextmanager
 from datetime import datetime
 from tempfile import NamedTemporaryFile, TemporaryDirectory
-from types import SimpleNamespace
 from typing import Any, TypeAlias
 from uuid import UUID
 
@@ -17,16 +15,11 @@ from pybotx.bot.bot_accounts_storage import BotAccountsStorage
 from pybotx.bot.callbacks.callback_manager import CallbackManager
 from pybotx.bot.callbacks.callback_memory_repo import CallbackMemoryRepo
 from pybotx.bot.callbacks.callback_repo_proto import CallbackRepoProto
-from pybotx.bot.contextvars import bot_id_var, chat_id_var
 from pybotx.bot.exceptions import (
-    AnswerDestinationLookupError,
     RequestHeadersNotProvidedError,
     UnknownBotAccountError,
     UnverifiedRequestError,
 )
-from pybotx.bot.handler import Middleware
-from pybotx.bot.handler_collector import HandlerCollector
-from pybotx.bot.middlewares.exception_middleware import ExceptionHandlersDict
 from pybotx.buffer import BufferReadable, BufferWritable
 from pybotx.client.bots_api.bot_catalog import (
     BotsListMethod,
@@ -232,7 +225,6 @@ from pybotx.client.voex_api.get_conference import (
     GetConferenceMethod,
 )
 from pybotx.constants import BOTX_DEFAULT_TIMEOUT, STICKER_PACKS_PER_PAGE
-from pybotx.converters import optional_sequence_to_list
 from pybotx.image_validators import (
     ensure_file_content_is_png,
     ensure_sticker_image_size_valid,
@@ -262,15 +254,9 @@ from pybotx.models.smartapps import SmartApp
 from pybotx.models.status import (
     BotAPIStatusRecipient,
     BotMenu,
-    StatusRecipient,
     build_bot_status_response,
 )
 from pybotx.models.stickers import Sticker, StickerPack, StickerPackFromList
-from pybotx.models.sync_smartapp_event import (
-    BotAPISyncSmartAppEvent,
-    BotAPISyncSmartAppEventResponse,
-)
-from pybotx.models.system_events.smartapp_event import SmartAppEvent
 from pybotx.models.users import UserFromCSV, UserFromSearch
 
 MissingOptionalAttachment: TypeAlias = MissingOptional[
@@ -282,27 +268,17 @@ class Bot:
     def __init__(
         self,
         *,
-        collectors: Sequence[HandlerCollector],
         bot_accounts: Sequence[BotAccountWithSecret],
-        middlewares: Sequence[Middleware] | None = None,
+        bot_menu: BotMenu | None = None,
         httpx_client: httpx.Client | None = None,
-        exception_handlers: ExceptionHandlersDict | None = None,
         default_callback_timeout: float = BOTX_DEFAULT_TIMEOUT,
         callback_repo: CallbackRepoProto | None = None,
         auth_version: BotXAuthVersion = BotXAuthVersion.V2,
     ) -> None:
-        if not collectors:
-            logger.warning("Bot has no connected collectors")
         if not bot_accounts:
             logger.warning("Bot has no bot accounts")
 
-        middlewares = optional_sequence_to_list(middlewares)
-        self._handler_collector = self._build_main_collector(
-            collectors,
-            middlewares,
-            exception_handlers,
-        )
-
+        self._bot_menu: BotMenu = bot_menu or BotMenu({})
         self._default_callback_timeout = default_callback_timeout
         self._bot_accounts_storage = BotAccountsStorage(
             list(bot_accounts),
@@ -315,21 +291,27 @@ class Bot:
 
         self._callbacks_manager = CallbackManager(callback_repo)
 
-        self.state: SimpleNamespace = SimpleNamespace()
-
-    def execute_raw_bot_command(
+    def parse_bot_command(
         self,
         raw_bot_command: dict[str, Any],
-        verify_request: bool = True,
         request_headers: Mapping[str, str] | None = None,
+        verify_request: bool = True,
         logging_command: bool = True,
-        trusted_issuers: set[str] | None = None,
-    ) -> threading.Thread:
+    ) -> BotCommand:
+        """Parse raw incoming command into a domain object.
+
+        :param raw_bot_command: Raw JSON dict from BotX.
+        :param request_headers: HTTP headers for JWT verification.
+        :param verify_request: Verify JWT signature.
+        :param logging_command: Log the incoming command.
+
+        :return: BotCommand (IncomingMessage or a SystemEvent subtype).
+        """
         if logging_command:
             log_incoming_request(raw_bot_command, message="Got command: ")
 
         if verify_request:
-            self._verify_request(request_headers, trusted_issuers=trusted_issuers)
+            self._verify_request(request_headers)
 
         try:
             command_type = raw_bot_command.get("command", {}).get("command_type")
@@ -343,103 +325,60 @@ class Bot:
             raise ValueError("Bot command validation error") from validation_exc
 
         bot_command = bot_api_command.to_domain(raw_bot_command)
-        return self.execute_bot_command(bot_command)
-
-    def execute_bot_command(
-        self,
-        bot_command: BotCommand,
-    ) -> threading.Thread:
-        # raise UnknownBotAccountError if no bot account with this bot_id.
         self._bot_accounts_storage.ensure_bot_id_exists(bot_command.bot.id)
+        return bot_command
 
-        return self._handler_collector.spawn_handler_thread(self, bot_command)
-
-    def sync_execute_raw_smartapp_event(
-        self,
-        raw_smartapp_event: dict[str, Any],
-        verify_request: bool = True,
-        request_headers: Mapping[str, str] | None = None,
-        logging_command: bool = True,
-        trusted_issuers: set[str] | None = None,
-    ) -> BotAPISyncSmartAppEventResponse:
-        if logging_command:
-            log_incoming_request(
-                raw_smartapp_event,
-                message="Got sync smartapp event: ",
-            )
-
-        if verify_request:
-            self._verify_request(request_headers, trusted_issuers=trusted_issuers)
-
-        try:
-            bot_api_smartapp_event = BotAPISyncSmartAppEvent.model_validate(
-                raw_smartapp_event
-            )
-        except ValidationError as validation_exc:
-            raise ValueError(
-                "Sync smartapp event validation error",
-            ) from validation_exc
-
-        smartapp_event = bot_api_smartapp_event.to_domain(raw_smartapp_event)
-        return self.sync_execute_smartapp_event(smartapp_event)
-
-    def sync_execute_smartapp_event(
-        self,
-        smartapp_event: SmartAppEvent,
-    ) -> BotAPISyncSmartAppEventResponse:
-        self._bot_accounts_storage.ensure_bot_id_exists(smartapp_event.bot.id)
-        return self._handler_collector.handle_sync_smartapp_event(
-            self,
-            smartapp_event,
-        )
-
-    def raw_get_status(
+    def get_raw_status(
         self,
         query_params: dict[str, str],
-        verify_request: bool = True,
         request_headers: Mapping[str, str] | None = None,
-        trusted_issuers: set[str] | None = None,
+        verify_request: bool = True,
     ) -> dict[str, Any]:
+        """Build status response for BotX server.
+
+        :param query_params: Query string parameters from the request.
+        :param request_headers: HTTP headers for JWT verification.
+        :param verify_request: Verify JWT signature.
+
+        :return: Status response dict ready to be serialized to JSON.
+        """
         logger.opt(lazy=True).debug(
             "Got status: {status}",
             status=lambda: pformat_jsonable_obj(query_params),
         )
 
         if verify_request:
-            self._verify_request(request_headers, trusted_issuers=trusted_issuers)
+            self._verify_request(request_headers)
 
         try:
-            bot_api_status_recipient = BotAPIStatusRecipient.model_validate(
-                query_params
-            )
+            bot_api_status_recipient = BotAPIStatusRecipient.model_validate(query_params)
         except ValidationError as exc:
             raise ValueError("Status request validation error") from exc
 
         status_recipient = bot_api_status_recipient.to_domain()
-
-        bot_menu = self.get_status(status_recipient)
-        return build_bot_status_response(bot_menu)
-
-    def get_status(self, status_recipient: StatusRecipient) -> BotMenu:
-        # raise UnknownBotAccountError if no bot account with this bot_id.
         self._bot_accounts_storage.ensure_bot_id_exists(status_recipient.bot_id)
 
-        return self._handler_collector.get_bot_menu(status_recipient, self)
+        return build_bot_status_response(self._bot_menu)
 
-    def set_raw_botx_method_result(
+    def parse_callback(
         self,
-        raw_botx_method_result: dict[str, Any],
-        verify_request: bool = True,
+        raw_callback: dict[str, Any],
         request_headers: Mapping[str, str] | None = None,
-        trusted_issuers: set[str] | None = None,
+        verify_request: bool = True,
     ) -> None:
-        logger.debug("Got callback: {callback}", callback=raw_botx_method_result)
+        """Register async callback result received from BotX server.
+
+        :param raw_callback: Raw JSON dict from BotX callback request.
+        :param request_headers: HTTP headers for JWT verification.
+        :param verify_request: Verify JWT signature.
+        """
+        logger.debug("Got callback: {callback}", callback=raw_callback)
 
         if verify_request:
-            self._verify_request(request_headers, trusted_issuers=trusted_issuers)
+            self._verify_request(request_headers)
 
         callback: BotXMethodCallback = TypeAdapter(BotXMethodCallback).validate_python(
-            raw_botx_method_result,
+            raw_callback,
         )
 
         self._callbacks_manager.set_botx_method_callback_result(callback)
@@ -480,7 +419,6 @@ class Bot:
 
     def shutdown(self) -> None:
         self._callbacks_manager.stop_callbacks_waiting()
-        self._handler_collector.wait_active_tasks()
         self._httpx_client.close()
 
     # - Bots API -
@@ -524,77 +462,6 @@ class Bot:
         return botx_api_bots_list.to_domain()
 
     # - Notifications API -
-    def answer_message(
-        self,
-        body: str,
-        *,
-        metadata: Missing[dict[str, Any]] = Undefined,
-        bubbles: Missing[BubbleMarkup] = Undefined,
-        keyboard: Missing[KeyboardMarkup] = Undefined,
-        file: Missing[IncomingFileAttachment | OutgoingAttachment] = Undefined,
-        recipients: Missing[list[UUID]] = Undefined,
-        silent_response: Missing[bool] = Undefined,
-        markup_auto_adjust: Missing[bool] = Undefined,
-        stealth_mode: Missing[bool] = Undefined,
-        send_push: Missing[bool] = Undefined,
-        ignore_mute: Missing[bool] = Undefined,
-        wait_callback: bool = True,
-        callback_timeout: float | None = None,
-    ) -> UUID:
-        """Answer to incoming message.
-
-        Works just like `Bot.send`, but `bot_id` and `chat_id` are
-        taken from the incoming message.
-
-        :param body: Message body.
-        :param metadata: Notification options.
-        :param bubbles: Bubbles (buttons attached to message) markup.
-        :param keyboard: Keyboard (buttons below message input) markup.
-        :param file: Attachment.
-        :param recipients: List of recipients, empty for all in chat.
-        :param silent_response: (BotX default: False) Exclude next user
-            messages from history.
-        :param markup_auto_adjust: (BotX default: False) Move button to next
-            row, if its text doesn't fit.
-        :param stealth_mode: (BotX default: False) Enable stealth mode.
-        :param send_push: (BotX default: True) Send push notification on
-            devices.
-        :param ignore_mute: (BotX default: False) Ignore mute or dnd (do not
-            disturb).
-        :param wait_callback: Block method call until callback received.
-        :param callback_timeout: Callback timeout in seconds (or `None` for
-            endless waiting).
-
-        :raises AnswerDestinationLookupError: If you try to answer without
-            receiving incoming message.
-
-        :return: Notification sync_id.
-        """
-
-        try:
-            bot_id = bot_id_var.get()
-            chat_id = chat_id_var.get()
-        except LookupError as exc:
-            raise AnswerDestinationLookupError from exc
-
-        return self.send_message(
-            bot_id=bot_id,
-            chat_id=chat_id,
-            body=body,
-            metadata=metadata,
-            bubbles=bubbles,
-            keyboard=keyboard,
-            file=file,
-            recipients=recipients,
-            silent_response=silent_response,
-            markup_auto_adjust=markup_auto_adjust,
-            stealth_mode=stealth_mode,
-            send_push=send_push,
-            ignore_mute=ignore_mute,
-            wait_callback=wait_callback,
-            callback_timeout=callback_timeout,
-        )
-
     def send(
         self,
         *,
@@ -2510,14 +2377,3 @@ class Bot:
             if not trusted_issuers or issuer not in trusted_issuers:
                 raise UnverifiedRequestError("Invalid issuer")
 
-    @staticmethod
-    def _build_main_collector(
-        collectors: Sequence[HandlerCollector],
-        middlewares: list[Middleware],
-        exception_handlers: ExceptionHandlersDict | None = None,
-    ) -> HandlerCollector:
-        main_collector = HandlerCollector(middlewares=middlewares)
-        main_collector.insert_exception_middleware(exception_handlers)
-        main_collector.include(*collectors)
-
-        return main_collector

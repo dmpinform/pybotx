@@ -17,20 +17,12 @@ from pybotx.bot.api.responses.unverified_request import (
 from pybotx.bot.bot import Bot
 from pybotx.bot.callbacks.callback_repo_proto import CallbackRepoProto
 from pybotx.bot.exceptions import (
-    AnswerDestinationLookupError,
     BotShuttingDownError,
     BotXMethodCallbackNotFoundError,
     RequestHeadersNotProvidedError,
     UnknownBotAccountError,
     UnverifiedRequestError,
 )
-from pybotx.bot.handler import (
-    IncomingMessageHandlerFunc,
-    Middleware,
-    SyncSmartAppEventHandlerFunc,
-)
-from pybotx.bot.handler_collector import HandlerCollector
-from pybotx.bot.testing import lifespan_wrapper
 from pybotx.client.exceptions.callbacks import (
     BotXMethodFailedCallbackReceivedError,
     CallbackNotReceivedError,
@@ -68,7 +60,6 @@ from pybotx.client.exceptions.users import (
     UserNotFoundError,
     UserProfileUpdateUnavailableError,
 )
-from pybotx.client.smartapps_api.exceptions import SyncSmartAppEventHandlerNotFoundError
 from pybotx.client.smartapps_api.smartapp_manifest import (
     SmartappManifest,
     SmartappManifestAndroidParams,
@@ -174,7 +165,6 @@ from pybotx.models.users import UserFromCSV, UserFromSearch
 
 __all__ = (
     "AddedToChatEvent",
-    "AnswerDestinationLookupError",
     "AttachmentDocument",
     "AttachmentImage",
     "AttachmentTypes",
@@ -242,10 +232,8 @@ __all__ = (
     "FileMetadataNotFound",
     "FinalRecipientsListEmptyError",
     "Forward",
-    "HandlerCollector",
     "Image",
     "IncomingMessage",
-    "IncomingMessageHandlerFunc",
     "InternalBotNotificationEvent",
     "InvalidBotAccountError",
     "InvalidBotXResponsePayloadError",
@@ -266,7 +254,6 @@ __all__ = (
     "MentionUser",
     "MessageNotFoundError",
     "MessageStatus",
-    "Middleware",
     "OutgoingAttachment",
     "OutgoingMessage",
     "PermissionDeniedError",
@@ -275,7 +262,6 @@ __all__ = (
     "ReplyMessage",
     "RequestHeadersNotProvidedError",
     "SmartApp",
-    "SmartAppEvent",
     "SmartappManifest",
     "SmartappManifestAndroidParams",
     "SmartappManifestAuroraParams",
@@ -289,8 +275,6 @@ __all__ = (
     "StickerPack",
     "StickerPackFromList",
     "StickerPackOrStickerNotFoundError",
-    "SyncSmartAppEventHandlerFunc",
-    "SyncSmartAppEventHandlerNotFoundError",
     "SyncSourceTypes",
     "ThreadAlreadyExistsError",
     "ThreadCreationError",
@@ -311,7 +295,6 @@ __all__ = (
     "build_bot_disabled_response",
     "build_command_accepted_response",
     "build_unverified_request_response",
-    "lifespan_wrapper",
 )
 
 logger.disable("pybotx")

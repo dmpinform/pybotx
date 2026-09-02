@@ -2,12 +2,11 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from tempfile import SpooledTemporaryFile
-from typing import Literal, cast
+from typing import Any, Literal, cast
 from uuid import UUID
 
 from pydantic import ConfigDict
 
-from pybotx.bot.contextvars import bot_id_var, bot_var, chat_id_var
 from pybotx.constants import CHUNK_SIZE
 from pybotx.missing import MissingOptional, Undefined
 from pybotx.models.api_base import VerifiedPayloadBaseModel
@@ -51,13 +50,18 @@ class FileBase:
         return self._file_hash
 
     @contextmanager
-    def open(self, *, is_preview: bool = False) -> Iterator[SpooledTemporaryFile[bytes]]:
-        bot = bot_var.get()
-
+    def open(
+        self,
+        bot: "Any",
+        bot_id: "UUID",
+        chat_id: "UUID",
+        *,
+        is_preview: bool = False,
+    ) -> Iterator[SpooledTemporaryFile[bytes]]:
         with SpooledTemporaryFile(max_size=CHUNK_SIZE) as tmp_file:
             bot.download_file(
-                bot_id=bot_id_var.get(),
-                chat_id=chat_id_var.get(),
+                bot_id=bot_id,
+                chat_id=chat_id,
                 file_id=self._file_id,
                 buffer=tmp_file,
                 is_preview=is_preview,

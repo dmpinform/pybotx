@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from pybotx.bot.contextvars import bot_var
+import httpx
+
 from pybotx.buffer import BufferWritable
 
 
@@ -25,14 +26,13 @@ class Sticker:
     def download(
         self,
         buffer: BufferWritable,
+        httpx_client: httpx.Client | None = None,
     ) -> None:
-        bot = bot_var.get()
-
-        response = bot._httpx_client.get(self.image_link)
+        client = httpx_client or httpx.Client()
+        response = client.get(self.image_link)
         response.raise_for_status()
 
         buffer.write(response.content)
-
         buffer.seek(0)
 
 

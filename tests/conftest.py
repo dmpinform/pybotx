@@ -1,7 +1,7 @@
 import logging
 import socket
-from collections.abc import Callable, Generator, Iterator
-from contextlib import AbstractContextManager, contextmanager
+from collections.abc import Callable, Generator
+
 from datetime import datetime
 from http import HTTPStatus
 from tempfile import NamedTemporaryFile
@@ -22,16 +22,13 @@ from pybotx import (
     BotXAuthVersion,
     Chat,
     ChatTypes,
-    HandlerCollector,
     IncomingMessage,
-    SmartAppEvent,
     UserDevice,
     UserSender,
-    lifespan_wrapper,
 )
 from pybotx.bot.bot_accounts_storage import BotAccountsStorage
 from pybotx.logger import logger
-from pybotx.models.sync_smartapp_event import BotAPISyncSmartAppEventResultResponse
+from pybotx.models.system_events.smartapp_event import SmartAppEvent
 from tests.fixtures.users_api import (  # noqa: F401
     user_from_search_with_data,
     user_from_search_with_data_json,
@@ -194,24 +191,6 @@ def mock_authorization(
             },
         ),
     )
-
-
-@pytest.fixture
-def bot_factory(
-    bot_account: BotAccountWithSecret,
-) -> Callable[..., AbstractContextManager[Bot]]:
-    @contextmanager
-    def factory(
-        *,
-        collectors: list[HandlerCollector] | None = None,
-        **kwargs: Any,
-    ) -> Iterator[Bot]:
-        collectors = collectors or [HandlerCollector()]
-        bot = Bot(collectors=collectors, bot_accounts=[bot_account], **kwargs)
-        with lifespan_wrapper(bot) as running_bot:
-            yield running_bot
-
-    return factory
 
 
 @pytest.hookimpl(trylast=True)
@@ -416,23 +395,6 @@ def incorrect_handler_trigger() -> Mock:
 @pytest.fixture(autouse=True)
 def prevent_http_requests(respx_mock: MockRouter) -> None:
     pass
-
-
-@pytest.fixture
-def collector_with_sync_smartapp_event_handler() -> HandlerCollector:
-    collector = HandlerCollector()
-
-    @collector.sync_smartapp_event
-    def handle_sync_smartapp_event(
-        event: SmartAppEvent,
-        _: Bot,
-    ) -> BotAPISyncSmartAppEventResultResponse:
-        return BotAPISyncSmartAppEventResultResponse.from_domain(
-            data=event.data,
-            files=event.files,
-        )
-
-    return collector
 
 
 @pytest.fixture
