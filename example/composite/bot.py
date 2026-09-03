@@ -5,11 +5,11 @@ from uuid import UUID
 """Точка входа Falcon WSGI-приложения."""
 import falcon
 from classic.signals import Hub
+from example.app.bot_controller import BotController
+from example.app.deps import bot
 from example.app.resources import CallbackResource, CommandResource, StatusResource
 from waitress import serve
 
-from example.app.bot_controller import BotController
-from example.app.deps import bot
 from example.app.usecases.echo import EchoUseCase
 from example.app.usecases.notify import Notify
 from example.app.usecases.send_mail import SendMail
