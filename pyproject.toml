@@ -39,7 +39,7 @@ factory-boy = "^3.3.3"
 deepdiff = "^8.6.1"
 
 fastapi = "^0.128.1"
-starlette = ">=0.40,<0.51"  # TODO: Drop dependency after updating end-to-end test
+starlette = ">=0.40,<0.53"  # TODO: Drop dependency after updating end-to-end test
 uvicorn = "^0.40.0"
 ruff = "^0.15.0"
 
