@@ -1,6 +1,6 @@
 from typing import Any
 
-import httpx
+import urllib3
 
 from pybotx.client.exceptions.base import BaseClientError
 
@@ -8,7 +8,7 @@ from pybotx.client.exceptions.base import BaseClientError
 class InvalidBotXResponseError(BaseClientError):
     """Received invalid response."""
 
-    def __init__(self, response: httpx.Response) -> None:
+    def __init__(self, response: urllib3.HTTPResponse) -> None:
         exc = BaseClientError.from_response(response)
         self.response = response
 

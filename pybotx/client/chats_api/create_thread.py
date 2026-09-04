@@ -1,7 +1,8 @@
+import json
 from typing import Literal, NoReturn
 from uuid import UUID
 
-import httpx
+import urllib3
 
 from pybotx.client.authorized_botx_method import AuthorizedBotXMethod
 from pybotx.client.botx_method import response_exception_thrower
@@ -34,8 +35,8 @@ class BotXAPICreateThreadResponsePayload(VerifiedPayloadBaseModel):
         return self.result.thread_id
 
 
-def conflict_error_handler(response: httpx.Response) -> NoReturn:
-    reason = response.json().get("reason")
+def conflict_error_handler(response: urllib3.HTTPResponse) -> NoReturn:
+    reason = json.loads(response.data).get("reason")
 
     if reason == "thread_already_created":
         raise ThreadAlreadyExistsError.from_response(response)

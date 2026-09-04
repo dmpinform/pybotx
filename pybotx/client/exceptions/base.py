@@ -1,5 +1,5 @@
 
-import httpx
+import urllib3
 
 from pybotx.models.method_callbacks import BotAPIMethodFailedCallback
 
@@ -12,16 +12,17 @@ class BaseClientError(Exception):
     @classmethod
     def from_response(
         cls,
-        response: httpx.Response,
+        response: urllib3.HTTPResponse,
         comment: str | None = None,
     ) -> "BaseClientError":
-        method = response.request.method
-        url = response.request.url
-        status_code = response.status_code
-        content = response.content
+        # urllib3.HTTPResponse не хранит request, используем доступные атрибуты
+        method = getattr(response, "_method", "UNKNOWN")
+        url = response.geturl()
+        status_code = response.status
+        content = response.data
 
         message = (
-            f"{method} {url}\n"  # (Strange error on CI)
+            f"{method} {url}\n"
             f"failed with code {status_code} and payload:\n"
             f"{content!r}"
         )

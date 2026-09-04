@@ -1,7 +1,7 @@
 from typing import Any, Literal
 from uuid import UUID
 
-import httpx
+import urllib3
 
 from pybotx.client.authorized_botx_method import AuthorizedBotXMethod
 from pybotx.client.botx_method import callback_exception_thrower
@@ -146,7 +146,7 @@ _DIRECT_NOTIFICATION_SYNC_ERROR_MAP = {
 
 
 def _raise_direct_notification_sync_error(
-    response: "httpx.Response",
+    response: "urllib3.HTTPResponse",
     reason: str | None,
 ) -> None:
     exc_type = _DIRECT_NOTIFICATION_SYNC_ERROR_MAP.get(reason or "")

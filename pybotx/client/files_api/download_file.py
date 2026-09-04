@@ -1,7 +1,8 @@
+import json
 from typing import NoReturn
 from uuid import UUID
 
-import httpx
+import urllib3
 
 from pybotx.buffer import BufferWritable
 from pybotx.client.authorized_botx_method import AuthorizedBotXMethod
@@ -31,8 +32,8 @@ class BotXAPIDownloadFileRequestPayload(UnverifiedPayloadBaseModel):
         )
 
 
-def not_found_error_handler(response: httpx.Response) -> NoReturn:
-    reason = response.json().get("reason")
+def not_found_error_handler(response: urllib3.HTTPResponse) -> NoReturn:
+    reason = json.loads(response.data).get("reason")
 
     if reason == "file_metadata_not_found":
         raise FileMetadataNotFound.from_response(response)

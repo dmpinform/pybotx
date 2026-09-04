@@ -3,7 +3,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any
 
-import httpx
+import urllib3
 
 from pybotx.auth import BotXAuthVersion
 from pybotx.client.botx_method import BotXMethod, response_exception_thrower
@@ -19,7 +19,7 @@ class AuthorizedBotXMethod(BotXMethod):
         self,
         *args: Any,
         **kwargs: Any,
-    ) -> httpx.Response:
+    ) -> urllib3.HTTPResponse:
         headers = kwargs.pop("headers", {})
         self._add_authorization_headers(headers)
 
@@ -30,7 +30,7 @@ class AuthorizedBotXMethod(BotXMethod):
         self,
         *args: Any,
         **kwargs: Any,
-    ) -> Iterator[httpx.Response]:
+    ) -> Iterator[urllib3.HTTPResponse]:
         headers = kwargs.pop("headers", {})
         self._add_authorization_headers(headers)
 
@@ -57,7 +57,7 @@ class AuthorizedBotXMethod(BotXMethod):
             if token_or_none is None:
                 token = get_token(
                     self._bot_id,
-                    self._httpx_client,
+                    self._http_client,
                     self._bot_accounts_storage,
                 )
                 self._bot_accounts_storage.set_token(self._bot_id, token)

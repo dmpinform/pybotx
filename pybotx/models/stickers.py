@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-import httpx
+import urllib3
 
 from pybotx.buffer import BufferWritable
 
@@ -26,13 +26,15 @@ class Sticker:
     def download(
         self,
         buffer: BufferWritable,
-        httpx_client: httpx.Client | None = None,
+        http_client: urllib3.PoolManager | None = None,
     ) -> None:
-        client = httpx_client or httpx.Client()
-        response = client.get(self.image_link)
-        response.raise_for_status()
+        client = http_client or urllib3.PoolManager()
+        response = client.request("GET", self.image_link, preload_content=True)
 
-        buffer.write(response.content)
+        if not (200 <= response.status < 300):
+            raise urllib3.exceptions.HTTPError(f"HTTP {response.status}")
+
+        buffer.write(response.data)
         buffer.seek(0)
 
 

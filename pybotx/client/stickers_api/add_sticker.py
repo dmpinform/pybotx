@@ -1,7 +1,8 @@
+import json
 from typing import Literal, NoReturn
 from uuid import UUID
 
-import httpx
+import urllib3
 
 from pybotx.buffer import BufferReadable
 from pybotx.client.authorized_botx_method import AuthorizedBotXMethod
@@ -55,13 +56,14 @@ class BotXAPIAddStickerResponsePayload(VerifiedPayloadBaseModel):
         )
 
 
-def bad_request_error_handler(response: httpx.Response) -> NoReturn:
-    reason = response.json().get("reason")
+def bad_request_error_handler(response: urllib3.HTTPResponse) -> NoReturn:
+    data = json.loads(response.data)
+    reason = data.get("reason")
 
     if reason == "pack_not_found":
         raise StickerPackOrStickerNotFoundError.from_response(response)
 
-    error_data = response.json().get("error_data")
+    error_data = data.get("error_data")
 
     if error_data.get("emoji") == "invalid":
         raise InvalidEmojiError.from_response(response)

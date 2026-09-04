@@ -8,7 +8,7 @@ from tempfile import NamedTemporaryFile, TemporaryDirectory
 from typing import Any, TypeAlias
 from uuid import UUID
 
-import httpx
+import urllib3
 
 from pybotx.bot.bot_accounts_storage import BotAccountsStorage
 from pybotx.bot.callbacks.callback_manager import CallbackManager
@@ -248,19 +248,19 @@ class Client:
     def __init__(
         self,
         bot_accounts_storage: BotAccountsStorage,
-        httpx_client: httpx.Client,
+        http_client: urllib3.PoolManager,
         callbacks_manager: CallbackManager,
         default_callback_timeout: float = BOTX_DEFAULT_TIMEOUT,
     ) -> None:
         """Initialize Client.
 
         :param bot_accounts_storage: Storage for bot accounts and auth.
-        :param httpx_client: HTTP client for requests.
+        :param http_client: HTTP client (urllib3.PoolManager) for requests.
         :param callbacks_manager: Manager for async callbacks.
         :param default_callback_timeout: Default timeout for callbacks.
         """
         self._bot_accounts_storage = bot_accounts_storage
-        self._httpx_client = httpx_client
+        self._http_client = http_client
         self._callbacks_manager = callbacks_manager
         self._default_callback_timeout = default_callback_timeout
 
@@ -277,7 +277,7 @@ class Client:
         :return: Auth token.
         """
     
-        return get_token(bot_id, self._httpx_client, self._bot_accounts_storage)
+        return get_token(bot_id, self._http_client, self._bot_accounts_storage)
     
     def get_bots_list(
         self,
@@ -295,7 +295,7 @@ class Client:
     
         method = BotsListMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPIBotsListRequestPayload.from_domain(since=since)
@@ -386,7 +386,7 @@ class Client:
     
         method = DirectNotificationMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
             self._callbacks_manager,
         )
@@ -456,7 +456,7 @@ class Client:
     
         method = DirectNotificationSyncMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
     
@@ -504,7 +504,7 @@ class Client:
     
         method = InternalBotNotificationMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
             self._callbacks_manager,
         )
@@ -577,7 +577,7 @@ class Client:
     
         method = EditEventMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPIEditEventRequestPayload.from_domain(
@@ -668,7 +668,7 @@ class Client:
         )
         method = ReplyEventMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         method.execute(payload)
@@ -685,7 +685,7 @@ class Client:
         payload = BotXAPIMessageStatusRequestPayload.from_domain(sync_id=sync_id)
         method = MessageStatusMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
     
@@ -709,7 +709,7 @@ class Client:
         )
         method = TypingEventMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         method.execute(payload)
@@ -731,7 +731,7 @@ class Client:
         )
         method = StopTypingEventMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         method.execute(payload)
@@ -754,7 +754,7 @@ class Client:
     
         method = DeleteEventMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
     
@@ -775,7 +775,7 @@ class Client:
     
         method = ListChatsMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
     
@@ -797,7 +797,7 @@ class Client:
         :return: Chat information.
         """
     
-        method = ChatInfoMethod(bot_id, self._httpx_client, self._bot_accounts_storage)
+        method = ChatInfoMethod(bot_id, self._http_client, self._bot_accounts_storage)
     
         payload = BotXAPIChatInfoRequestPayload.from_domain(chat_id=chat_id)
         botx_api_chat_info = method.execute(payload)
@@ -819,7 +819,7 @@ class Client:
         """
     
         method = PersonalChatMethod(
-            bot_id, self._httpx_client, self._bot_accounts_storage
+            bot_id, self._http_client, self._bot_accounts_storage
         )
     
         payload = BotXAPIPersonalChatRequestPayload.from_domain(user_huid=user_huid)
@@ -872,7 +872,7 @@ class Client:
         :param huids: List of eXpress account ids.
         """
     
-        method = AddUserMethod(bot_id, self._httpx_client, self._bot_accounts_storage)
+        method = AddUserMethod(bot_id, self._http_client, self._bot_accounts_storage)
     
         payload = BotXAPIAddUserRequestPayload.from_domain(chat_id=chat_id, huids=huids)
         method.execute(payload)
@@ -893,7 +893,7 @@ class Client:
     
         method = RemoveUserMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
     
@@ -919,7 +919,7 @@ class Client:
     
         method = AddAdminMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
     
@@ -954,7 +954,7 @@ class Client:
     
         method = SetStealthMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPISetStealthRequestPayload.from_domain(
@@ -980,7 +980,7 @@ class Client:
     
         method = DisableStealthMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPIDisableStealthRequestPayload.from_domain(chat_id=chat_id)
@@ -1014,7 +1014,7 @@ class Client:
     
         method = CreateChatMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
     
@@ -1052,7 +1052,7 @@ class Client:
     
         method = CreateChatLinkMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
     
@@ -1078,7 +1078,7 @@ class Client:
     
         method = CreateThreadMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
     
@@ -1103,7 +1103,7 @@ class Client:
     
         method = PinMessageMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPIPinMessageRequestPayload.from_domain(
@@ -1128,7 +1128,7 @@ class Client:
         """
         method = GetCallMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPIGetCallRequestPayload.from_domain(
@@ -1153,7 +1153,7 @@ class Client:
         """
         method = GetConferenceMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPIGetConferenceRequestPayload.from_domain(
@@ -1177,7 +1177,7 @@ class Client:
     
         method = UnpinMessageMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPIUnpinMessageRequestPayload.from_domain(chat_id=chat_id)
@@ -1204,7 +1204,7 @@ class Client:
     
         method = SearchUserByEmailsMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPISearchUserByEmailsRequestPayload.from_domain(
@@ -1241,7 +1241,7 @@ class Client:
     
         method = SearchUserByEmailPostMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPISearchUserByEmailRequestPayload.from_domain(
@@ -1272,7 +1272,7 @@ class Client:
     
         method = SearchUserByEmailMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPISearchUserByEmailRequestPayload.from_domain(email=email)
@@ -1297,7 +1297,7 @@ class Client:
     
         method = SearchUserByHUIDMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPISearchUserByHUIDRequestPayload.from_domain(huid=huid)
@@ -1324,7 +1324,7 @@ class Client:
     
         method = SearchUserByLoginMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPISearchUserByLoginRequestPayload.from_domain(
@@ -1352,7 +1352,7 @@ class Client:
     
         method = SearchUserByOtherIdMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPISearchUserByOtherIdRequestPayload.from_domain(
@@ -1394,7 +1394,7 @@ class Client:
         """
         method = UpdateUsersProfileMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
     
@@ -1433,7 +1433,7 @@ class Client:
         """
         method = UsersAsCSVMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPIUsersAsCSVRequestPayload.from_domain(
@@ -1483,7 +1483,7 @@ class Client:
     
         method = SmartAppEventMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPISmartAppEventRequestPayload.from_domain(
@@ -1519,7 +1519,7 @@ class Client:
     
         method = SmartAppNotificationMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPISmartAppNotificationRequestPayload.from_domain(
@@ -1548,7 +1548,7 @@ class Client:
     
         method = SmartAppsListMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPISmartAppsListRequestPayload.from_domain(version=version)
@@ -1585,7 +1585,7 @@ class Client:
     
         method = SmartAppManifestMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPISmartAppManifestRequestPayload.from_domain(
@@ -1618,7 +1618,7 @@ class Client:
     
         method = SmartappsUploadFileMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
     
@@ -1653,7 +1653,7 @@ class Client:
     
         method = SmartAppCustomNotificationMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
             self._callbacks_manager,
         )
@@ -1696,7 +1696,7 @@ class Client:
     
         method = SmartAppUnreadCounterMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
             self._callbacks_manager,
         )
@@ -1733,7 +1733,7 @@ class Client:
     
         method = CreateStickerPackMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPICreateStickerPackRequestPayload.from_domain(
@@ -1768,7 +1768,7 @@ class Client:
     
         method = AddStickerMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPIAddStickerRequestPayload.from_domain(
@@ -1797,7 +1797,7 @@ class Client:
     
         method = DeleteStickerMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPIDeleteStickerRequestPayload.from_domain(
@@ -1825,7 +1825,7 @@ class Client:
     
         method = GetStickerPacksMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
     
@@ -1861,7 +1861,7 @@ class Client:
     
         method = GetStickerPackMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPIGetStickerPackRequestPayload.from_domain(
@@ -1881,7 +1881,7 @@ class Client:
     
         method = DeleteStickerPackMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
     
@@ -1909,7 +1909,7 @@ class Client:
     
         method = GetStickerMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPIGetStickerRequestPayload.from_domain(
@@ -1943,7 +1943,7 @@ class Client:
     
         method = EditStickerPackMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPIEditStickerPackRequestPayload.from_domain(
@@ -1978,7 +1978,7 @@ class Client:
     
         method = DownloadFileMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPIDownloadFileRequestPayload.from_domain(
@@ -2013,7 +2013,7 @@ class Client:
     
         method = UploadFileMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPIUploadFileRequestPayload.from_domain(
@@ -2043,7 +2043,7 @@ class Client:
     
         method = RefreshAccessTokenMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
             self._callbacks_manager,
         )
@@ -2072,7 +2072,7 @@ class Client:
     
         method = CollectBotFunctionMethod(
             bot_id,
-            self._httpx_client,
+            self._http_client,
             self._bot_accounts_storage,
         )
     

@@ -1,6 +1,6 @@
 from uuid import UUID
 
-import httpx
+import urllib3
 
 from pybotx.bot.bot_accounts_storage import BotAccountsStorage
 from pybotx.client.bots_api.get_token import (
@@ -11,7 +11,7 @@ from pybotx.client.bots_api.get_token import (
 
 def get_token(
     bot_id: UUID,
-    httpx_client: httpx.Client,
+    http_client: urllib3.PoolManager,
     bot_accounts_storage: BotAccountsStorage,
 ) -> str:
     """Request token for bot.
@@ -21,7 +21,7 @@ def get_token(
 
     method = GetTokenMethod(
         bot_id,
-        httpx_client,
+        http_client,
         bot_accounts_storage,
     )
 

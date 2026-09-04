@@ -15,11 +15,7 @@ repository = "https://github.com/ExpressApp/pybotx"
 [tool.poetry.dependencies]
 python = ">=3.10,<4.0"
 
-httpx = "^0.28.1"
-# The v1.0.3 cause some troubles with no-wait callbacks functionality.
-# It will be fixed in the next versions.
-# https://github.com/encode/httpcore/pull/880
-httpcore = "^1.0.9"
+urllib3 = "^2.2.0"
 loguru = "^0.7.3"
 pydantic = "^2.12.5"
 pyjwt = "^2.11.0"

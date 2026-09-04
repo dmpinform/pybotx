@@ -436,7 +436,7 @@ elif isinstance(bot_command, ChatCreatedEvent):
 | `bot_accounts` | `Sequence[BotAccountWithSecret]` | — | Список аккаунтов бота |
 | `bot_menu` | `BotMenu \| None` | `BotMenu({})` | Меню команд для `/status` |
 | `handlers` | `dict[str, CommandHandler] \| None` | `{}` | Обработчики команд |
-| `httpx_client` | `httpx.Client \| None` | новый клиент | Кастомный HTTP-клиент |
+| `http_client` | `urllib3.PoolManager \| None` | новый клиент | Кастомный HTTP-клиент (urllib3) |
 | `default_callback_timeout` | `float` | 60 с | Таймаут ожидания колбэка |
 | `callback_repo` | `CallbackRepoProto \| None` | in-memory | Хранилище колбэков |
 | `auth_version` | `BotXAuthVersion` | `V2` | Версия аутентификации |
@@ -540,17 +540,17 @@ from pybotx.client.client import Client
 from pybotx.bot.bot_accounts_storage import BotAccountsStorage
 from pybotx.bot.callbacks.callback_manager import CallbackManager
 from pybotx.bot.callbacks.callback_memory_repo import CallbackMemoryRepo
-import httpx
+import urllib3
 
 # Создать зависимости
 storage = BotAccountsStorage([bot_account])
-httpx_client = httpx.Client()
+pool = urllib3.PoolManager()
 callbacks_manager = CallbackManager(CallbackMemoryRepo())
 
 # Создать Client
 client = Client(
     bot_accounts_storage=storage,
-    httpx_client=httpx_client,
+    http_client=pool,
     callbacks_manager=callbacks_manager,
 )
 

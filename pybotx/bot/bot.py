@@ -2,8 +2,8 @@ from collections.abc import Iterator, Mapping, Sequence
 from typing import Any
 from uuid import UUID
 
-import httpx
 import jwt
+import urllib3
 from pydantic import TypeAdapter, ValidationError
 
 from pybotx.auth import BotXAuthVersion
@@ -40,7 +40,7 @@ class Bot:
         *,
         bot_accounts: Sequence[BotAccountWithSecret],
         bot_menu: BotMenu | None = None,
-        httpx_client: httpx.Client | None = None,
+        http_client: urllib3.PoolManager | None = None,
         default_callback_timeout: float = BOTX_DEFAULT_TIMEOUT,
         callback_repo: CallbackRepoProto | None = None,
         auth_version: BotXAuthVersion = BotXAuthVersion.V2,
@@ -55,7 +55,10 @@ class Bot:
             list(bot_accounts),
             auth_version=auth_version,
         )
-        self._httpx_client = httpx_client or httpx.Client()
+        self._http_client = http_client or urllib3.PoolManager(
+            timeout=urllib3.Timeout(connect=10.0, read=default_callback_timeout),
+            retries=False,
+        )
 
         if not callback_repo:
             callback_repo = CallbackMemoryRepo()
@@ -67,7 +70,7 @@ class Bot:
 
         self._client = Client(
             bot_accounts_storage=self._bot_accounts_storage,
-            httpx_client=self._httpx_client,
+            http_client=self._http_client,
             callbacks_manager=self._callbacks_manager,
             default_callback_timeout=self._default_callback_timeout,
         )
@@ -212,7 +215,7 @@ class Bot:
         for bot_account in self.bot_accounts:
             try:
                 token = self._client.get_token(bot_id=bot_account.id)
-            except (InvalidBotAccountError, httpx.HTTPError):
+            except (InvalidBotAccountError, urllib3.exceptions.HTTPError):
                 logger.opt(exception=True).warning(
                     "Can't get token for bot account: "
                     f"host - {bot_account.host}, bot_id - {bot_account.id}",
@@ -227,7 +230,7 @@ class Bot:
 
     def shutdown(self) -> None:
         self._callbacks_manager.stop_callbacks_waiting()
-        self._httpx_client.close()
+        self._http_client.clear()
 
     def _verify_request(
         self,
