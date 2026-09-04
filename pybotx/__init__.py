@@ -16,6 +16,8 @@ from pybotx.bot.api.responses.unverified_request import (
 )
 from pybotx.bot.bot import Bot
 from pybotx.bot.callbacks.callback_repo_proto import CallbackRepoProto
+from pybotx.bot.command_handler import CommandHandler
+from pybotx.client.client import Client
 from pybotx.bot.exceptions import (
     BotShuttingDownError,
     BotXMethodCallbackNotFoundError,
@@ -171,6 +173,8 @@ __all__ = (
     "AttachmentVideo",
     "AttachmentVoice",
     "Bot",
+    "Client",
+    "CommandHandler",
     "BotAPIBotDisabledErrorData",
     "BotAPIBotDisabledResponse",
     "BotAPIMethodFailedCallback",

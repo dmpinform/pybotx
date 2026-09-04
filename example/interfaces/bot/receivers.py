@@ -1,7 +1,14 @@
+from uuid import UUID
+
 from classic.signals import Hub
 
 from example.app.usecases.notify import Notification
 from pybotx import Client
+
+# Константы для примера (должны быть из конфигурации)
+BOT_ID = UUID("ffffffff-ffff-ffff-ffff-ffffffffffff")
+NOTIFY_CHAT_ID = UUID("00000000-0000-0000-0000-000000000001")
+
 
 class Receivers:
 

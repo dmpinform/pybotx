@@ -2,7 +2,7 @@
 
 import falcon
 
-from pybotx import IncomingMessage, UnverifiedRequestError
+from pybotx import Bot, IncomingMessage, UnverifiedRequestError
 from pybotx.bot.api.responses.command_accepted import build_command_accepted_response
 from pybotx.bot.api.responses.unverified_request import (
     build_unverified_request_response,
@@ -18,7 +18,7 @@ class CommandResource:
 
     def on_post(self, req: falcon.Request, resp: falcon.Response) -> None:
         try:
-            bot_command = bot.parse_bot_command(
+            bot_command = self._bot.parse_bot_command(
                 req.media,
                 request_headers=dict(req.headers),
             )
@@ -28,7 +28,7 @@ class CommandResource:
             return
 
         if isinstance(bot_command, IncomingMessage):
-            controller.dispatch(bot_command)
+            self._bot.dispatch_command(bot_command)
 
         resp.media = build_command_accepted_response()
 
@@ -36,9 +36,12 @@ class CommandResource:
 class StatusResource:
     """GET /status — меню бота."""
 
+    def __init__(self, bot: Bot):
+        self._bot = bot
+
     def on_get(self, req: falcon.Request, resp: falcon.Response) -> None:
         try:
-            status = bot.get_raw_status(
+            status = self._bot.get_raw_status(
                 dict(req.params),
                 request_headers=dict(req.headers),
             )
@@ -53,9 +56,12 @@ class StatusResource:
 class CallbackResource:
     """POST /notification/callback — async-результаты от BotX."""
 
+    def __init__(self, bot: Bot):
+        self._bot = bot
+
     def on_post(self, req: falcon.Request, resp: falcon.Response) -> None:
         try:
-            bot.parse_callback(
+            self._bot.parse_callback(
                 req.media,
                 request_headers=dict(req.headers),
             )
