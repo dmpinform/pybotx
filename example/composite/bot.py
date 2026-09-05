@@ -93,7 +93,7 @@ application = create_app()
 
 
 if __name__ == "__main__":
-    bot.startup(client)
+    bot.startup()
     try:
         serve(application, host="0.0.0.0", port=8000)  # type: ignore[arg-type]
     finally:

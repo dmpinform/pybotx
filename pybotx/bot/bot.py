@@ -17,6 +17,7 @@ from pybotx.bot.exceptions import (
     UnverifiedRequestError,
 )
 from pybotx.client.exceptions.common import InvalidBotAccountError
+from pybotx.client.get_token import get_token
 from pybotx.constants import BOTX_DEFAULT_TIMEOUT
 from pybotx.logger import log_incoming_request, logger, pformat_jsonable_obj
 from pybotx.models.bot_account import BotAccountWithSecret
@@ -126,7 +127,9 @@ class Bot:
             self._verify_request(request_headers)
 
         try:
-            bot_api_status_recipient = BotAPIStatusRecipient.model_validate(query_params)
+            bot_api_status_recipient = BotAPIStatusRecipient.model_validate(
+                query_params
+            )
         except ValidationError as exc:
             raise ValueError("Status request validation error") from exc
 
@@ -173,7 +176,7 @@ class Bot:
     def bot_accounts(self) -> Iterator[BotAccountWithSecret]:
         yield from self._bot_accounts_storage.iter_bot_accounts()
 
-    def fetch_tokens(self, client: Any) -> None:
+    def fetch_tokens(self) -> None:
         """Fetch tokens for all bot accounts (only for V1 auth).
 
         :param client: Client instance for API calls.
@@ -182,7 +185,11 @@ class Bot:
             return
         for bot_account in self.bot_accounts:
             try:
-                token = client.get_token(bot_id=bot_account.id)
+                token = get_token(
+                    bot_id=bot_account.id,
+                    http_client=self._http_client,
+                    bot_accounts_storage=self._bot_accounts_storage,
+                )
             except (InvalidBotAccountError, urllib3.exceptions.HTTPError):
                 logger.opt(exception=True).warning(
                     "Can't get token for bot account: "
@@ -192,14 +199,14 @@ class Bot:
 
             self._bot_accounts_storage.set_token(bot_account.id, token)
 
-    def startup(self, client: Any, *, fetch_tokens: bool = True) -> None:
+    def startup(self, *, fetch_tokens: bool = True) -> None:
         """Initialize bot on startup.
 
         :param client: Client instance for API calls.
         :param fetch_tokens: Whether to fetch tokens (V1 auth only).
         """
         if fetch_tokens:
-            self.fetch_tokens(client)
+            self.fetch_tokens()
 
     def shutdown(self) -> None:
         self._callbacks_manager.stop_callbacks_waiting()
@@ -341,4 +348,3 @@ class Bot:
         if issuer != bot_account.host:
             if not trusted_issuers or issuer not in trusted_issuers:
                 raise UnverifiedRequestError("Invalid issuer")
-

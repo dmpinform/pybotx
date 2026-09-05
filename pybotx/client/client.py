@@ -95,7 +95,6 @@ from pybotx.client.files_api.upload_file import (
     BotXAPIUploadFileRequestPayload,
     UploadFileMethod,
 )
-from pybotx.client.get_token import get_token
 from pybotx.client.mertics_api.collect_bot_function import (
     BotXAPICollectBotFunctionRequestPayload,
     CollectBotFunctionMethod,
@@ -264,21 +263,6 @@ class Client:
         self._callbacks_manager = callbacks_manager
         self._default_callback_timeout = default_callback_timeout
 
-    # API methods will be added below
-    def get_token(
-        self,
-        *,
-        bot_id: UUID,
-    ) -> str:
-        """Get bot auth token.
-    
-        :param bot_id: Bot which should perform the request.
-    
-        :return: Auth token.
-        """
-    
-        return get_token(bot_id, self._http_client, self._bot_accounts_storage)
-    
     def get_bots_list(
         self,
         *,
@@ -286,24 +270,24 @@ class Client:
         since: Missing[datetime] = Undefined,
     ) -> tuple[list[BotsListItem], datetime]:
         """Get list of Bots on the current CTS.
-    
+
         :param bot_id: Bot which should perform the request.
         :param since: Only return bots changed after this date.
-    
+
         :return: List of Bots, generated timestamp.
         """
-    
+
         method = BotsListMethod(
             bot_id,
             self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPIBotsListRequestPayload.from_domain(since=since)
-    
+
         botx_api_bots_list = method.execute(payload)
-    
+
         return botx_api_bots_list.to_domain()
-    
+
     # - Notifications API -
     def send(
         self,
@@ -313,14 +297,14 @@ class Client:
         callback_timeout: float | None = None,
     ) -> UUID:
         """Send internal notification.
-    
+
         :param message: Built outgoing message.
         :param wait_callback: Wait for callback.
         :param callback_timeout: Timeout for waiting for callback.
-    
+
         :return: Notification sync_id.
         """
-    
+
         return self.send_message(
             bot_id=message.bot_id,
             chat_id=message.chat_id,
@@ -338,7 +322,7 @@ class Client:
             wait_callback=wait_callback,
             callback_timeout=callback_timeout,
         )
-    
+
     def send_message(
         self,
         *,
@@ -359,7 +343,7 @@ class Client:
         callback_timeout: float | None = None,
     ) -> UUID:
         """Send message to chat.
-    
+
         :param bot_id: Bot which should perform the request.
         :param chat_id: Target chat id.
         :param body: Message body.
@@ -380,17 +364,17 @@ class Client:
         :param wait_callback: Block method call until callback received.
         :param callback_timeout: Callback timeout in seconds (or `None` for
             endless waiting).
-    
+
         :return: Notification sync_id.
         """
-    
+
         method = DirectNotificationMethod(
             bot_id,
             self._http_client,
             self._bot_accounts_storage,
             self._callbacks_manager,
         )
-    
+
         payload = BotXAPIDirectNotificationRequestPayload.from_domain(
             chat_id=chat_id,
             body=body,
@@ -411,9 +395,9 @@ class Client:
             callback_timeout,
             self._default_callback_timeout,
         )
-    
+
         return botx_api_sync_id.to_domain()
-    
+
     def send_message_sync(
         self,
         *,
@@ -432,7 +416,7 @@ class Client:
         ignore_mute: Missing[bool] = Undefined,
     ) -> UUID:
         """Send message to chat synchronously (BotX >= 3.58).
-    
+
         :param bot_id: Bot which should perform the request.
         :param chat_id: Target chat id.
         :param body: Message body.
@@ -450,16 +434,16 @@ class Client:
             devices.
         :param ignore_mute: (BotX default: False) Ignore mute or dnd (do not
             disturb).
-    
+
         :return: Notification sync_id.
         """
-    
+
         method = DirectNotificationSyncMethod(
             bot_id,
             self._http_client,
             self._bot_accounts_storage,
         )
-    
+
         payload = BotXAPIDirectNotificationRequestPayload.from_domain(
             chat_id=chat_id,
             body=body,
@@ -475,9 +459,9 @@ class Client:
             ignore_mute=ignore_mute,
         )
         botx_api_sync_id = method.execute(payload)
-    
+
         return botx_api_sync_id.to_domain()
-    
+
     def send_internal_bot_notification(
         self,
         *,
@@ -490,7 +474,7 @@ class Client:
         callback_timeout: float | None = None,
     ) -> UUID:
         """Send internal notification.
-    
+
         :param bot_id: Bot which should perform the request.
         :param chat_id: Target chat id.
         :param data: Notification payload.
@@ -498,17 +482,17 @@ class Client:
         :param recipients: List of bot uuids, empty for all in chat.
         :param wait_callback: Wait for callback.
         :param callback_timeout: Timeout for waiting for callback.
-    
+
         :return: Notification sync_id.
         """
-    
+
         method = InternalBotNotificationMethod(
             bot_id,
             self._http_client,
             self._bot_accounts_storage,
             self._callbacks_manager,
         )
-    
+
         payload = BotXAPIInternalBotNotificationRequestPayload.from_domain(
             chat_id=chat_id,
             data=data,
@@ -521,9 +505,9 @@ class Client:
             callback_timeout,
             self._default_callback_timeout,
         )
-    
+
         return botx_api_sync_id.to_domain()
-    
+
     # - Events API -
     def edit(
         self,
@@ -531,10 +515,10 @@ class Client:
         message: EditMessage,
     ) -> None:
         """Edit message.
-    
+
         :param message: Built outgoing edit message.
         """
-    
+
         self.edit_message(
             bot_id=message.bot_id,
             sync_id=message.sync_id,
@@ -545,7 +529,7 @@ class Client:
             file=message.file,
             markup_auto_adjust=message.markup_auto_adjust,
         )
-    
+
     def edit_message(
         self,
         *,
@@ -559,7 +543,7 @@ class Client:
         markup_auto_adjust: Missing[bool] = Undefined,
     ) -> None:
         """Edit message.
-    
+
         :param bot_id: Bot which should perform the request.
         :param sync_id: `sync_id` of message to update.
         :param body: New message body. Skip to leave previous body or pass
@@ -574,7 +558,7 @@ class Client:
         :param markup_auto_adjust: (BotX default: False) Move button to next
             row, if its text doesn't fit.
         """
-    
+
         method = EditEventMethod(
             bot_id,
             self._http_client,
@@ -589,19 +573,19 @@ class Client:
             file=file,
             markup_auto_adjust=markup_auto_adjust,
         )
-    
+
         method.execute(payload)
-    
+
     def reply(
         self,
         *,
         message: ReplyMessage,
     ) -> None:
         """Reply message.
-    
+
         :param message: Built outgoing reply message.
         """
-    
+
         self.reply_message(
             bot_id=message.bot_id,
             sync_id=message.sync_id,
@@ -616,7 +600,7 @@ class Client:
             send_push=message.send_push,
             ignore_mute=message.ignore_mute,
         )
-    
+
     def reply_message(
         self,
         *,
@@ -634,7 +618,7 @@ class Client:
         ignore_mute: Missing[bool] = Undefined,
     ) -> None:
         """Reply on message by `sync_id`.
-    
+
         :param bot_id: Bot which should perform the request.
         :param sync_id: `sync_id` of message to reply on.
         :param body: Reply body.
@@ -652,7 +636,7 @@ class Client:
         :param ignore_mute: (BotX default: False) Ignore mute or dnd (do not
             disturb).
         """
-    
+
         payload = BotXAPIReplyEventRequestPayload.from_domain(
             sync_id=sync_id,
             body=body,
@@ -672,14 +656,14 @@ class Client:
             self._bot_accounts_storage,
         )
         method.execute(payload)
-    
+
     def get_message_status(self, *, bot_id: UUID, sync_id: UUID) -> MessageStatus:
         """
         Get status of message by `sync_id`.
-    
+
         :param bot_id: Bot which should perform the request.
         :param sync_id: `sync_id` of message to get its status.
-    
+
         :returns: Message status object.
         """
         payload = BotXAPIMessageStatusRequestPayload.from_domain(sync_id=sync_id)
@@ -688,10 +672,10 @@ class Client:
             self._http_client,
             self._bot_accounts_storage,
         )
-    
+
         botx_api_message_status = method.execute(payload)
         return botx_api_message_status.to_domain()
-    
+
     def start_typing(
         self,
         *,
@@ -699,11 +683,11 @@ class Client:
         chat_id: UUID,
     ) -> None:
         """Send `typing` event.
-    
+
         :param bot_id: Bot which should perform the request.
         :param chat_id: Target chat id.
         """
-    
+
         payload = BotXAPITypingEventRequestPayload.from_domain(
             chat_id=chat_id,
         )
@@ -713,7 +697,7 @@ class Client:
             self._bot_accounts_storage,
         )
         method.execute(payload)
-    
+
     def stop_typing(
         self,
         *,
@@ -721,11 +705,11 @@ class Client:
         chat_id: UUID,
     ) -> None:
         """Send `stop_typing` event.
-    
+
         :param bot_id: Bot which should perform the request.
         :param chat_id: Target chat id.
         """
-    
+
         payload = BotXAPIStopTypingEventRequestPayload.from_domain(
             chat_id=chat_id,
         )
@@ -735,7 +719,7 @@ class Client:
             self._bot_accounts_storage,
         )
         method.execute(payload)
-    
+
     def delete_message(
         self,
         *,
@@ -743,23 +727,23 @@ class Client:
         sync_id: UUID,
     ) -> None:
         """Delete message.
-    
+
         :param bot_id: Bot which should perform the request.
         :param sync_id: Target sync_id.
         """
-    
+
         payload = BotXAPIDeleteEventRequestPayload.from_domain(
             sync_id=sync_id,
         )
-    
+
         method = DeleteEventMethod(
             bot_id,
             self._http_client,
             self._bot_accounts_storage,
         )
-    
+
         method.execute(payload)
-    
+
     # - Chats API -
     def list_chats(
         self,
@@ -767,22 +751,22 @@ class Client:
         bot_id: UUID,
     ) -> list[ChatListItem]:
         """Get all bot chats.
-    
+
         :param bot_id: Bot which should perform the request.
-    
+
         :returns: List of chats info.
         """
-    
+
         method = ListChatsMethod(
             bot_id,
             self._http_client,
             self._bot_accounts_storage,
         )
-    
+
         botx_api_list_chat = method.execute()
-    
+
         return botx_api_list_chat.to_domain()
-    
+
     def chat_info(
         self,
         *,
@@ -790,20 +774,20 @@ class Client:
         chat_id: UUID,
     ) -> ChatInfo:
         """Get chat information.
-    
+
         :param bot_id: Bot which should perform the request.
         :param chat_id: Target chat id.
-    
+
         :return: Chat information.
         """
-    
+
         method = ChatInfoMethod(bot_id, self._http_client, self._bot_accounts_storage)
-    
+
         payload = BotXAPIChatInfoRequestPayload.from_domain(chat_id=chat_id)
         botx_api_chat_info = method.execute(payload)
-    
+
         return botx_api_chat_info.to_domain()
-    
+
     def personal_chat(
         self,
         *,
@@ -811,22 +795,22 @@ class Client:
         user_huid: UUID,
     ) -> ChatInfo:
         """Get personal chat between bot and user.
-    
+
         :param bot_id: Bot which should perform the request.
         :param user_huid: User identifier.
-    
+
         :return: Chat information.
         """
-    
+
         method = PersonalChatMethod(
             bot_id, self._http_client, self._bot_accounts_storage
         )
-    
+
         payload = BotXAPIPersonalChatRequestPayload.from_domain(user_huid=user_huid)
         botx_api_personal_chat = method.execute(payload)
-    
+
         return botx_api_personal_chat.to_domain()
-    
+
     def ensure_personal_chat(
         self,
         *,
@@ -835,17 +819,17 @@ class Client:
         name: str | None = None,
     ) -> ChatInfo:
         """Get or create personal chat with user.
-    
+
         Tries to fetch existing personal chat. If not found, creates it and
         returns chat info for the new chat.
-    
+
         :param bot_id: Bot which should perform the request.
         :param user_huid: Target user HUID.
         :param name: Optional chat name for creation.
-    
+
         :return: Chat information.
         """
-    
+
         try:
             return self.personal_chat(bot_id=bot_id, user_huid=user_huid)
         except ChatNotFoundError:
@@ -857,7 +841,7 @@ class Client:
                 huids=[user_huid],
             )
             return self.chat_info(bot_id=bot_id, chat_id=chat_id)
-    
+
     def add_users_to_chat(
         self,
         *,
@@ -866,17 +850,17 @@ class Client:
         huids: list[UUID],
     ) -> None:
         """Add user to chat.
-    
+
         :param bot_id: Bot which should perform the request.
         :param chat_id: Target chat id.
         :param huids: List of eXpress account ids.
         """
-    
+
         method = AddUserMethod(bot_id, self._http_client, self._bot_accounts_storage)
-    
+
         payload = BotXAPIAddUserRequestPayload.from_domain(chat_id=chat_id, huids=huids)
         method.execute(payload)
-    
+
     def remove_users_from_chat(
         self,
         *,
@@ -885,24 +869,24 @@ class Client:
         huids: list[UUID],
     ) -> None:
         """Remove eXpress accounts from chat.
-    
+
         :param bot_id: Bot which should perform the request.
         :param chat_id: Target chat id.
         :param huids: List of eXpress account ids.
         """
-    
+
         method = RemoveUserMethod(
             bot_id,
             self._http_client,
             self._bot_accounts_storage,
         )
-    
+
         payload = BotXAPIRemoveUserRequestPayload.from_domain(
             chat_id=chat_id,
             huids=huids,
         )
         method.execute(payload)
-    
+
     def promote_to_chat_admins(
         self,
         *,
@@ -911,24 +895,24 @@ class Client:
         huids: list[UUID],
     ) -> None:
         """Promote users in chat to admins.
-    
+
         :param bot_id: Bot which should perform the request.
         :param chat_id: Target chat id.
         :param huids: List of eXpress account ids.
         """
-    
+
         method = AddAdminMethod(
             bot_id,
             self._http_client,
             self._bot_accounts_storage,
         )
-    
+
         payload = BotXAPIAddAdminRequestPayload.from_domain(
             chat_id=chat_id,
             huids=huids,
         )
         method.execute(payload)
-    
+
     def enable_stealth(
         self,
         *,
@@ -939,9 +923,9 @@ class Client:
         total_ttl: Missing[int] = Undefined,
     ) -> None:
         """Enable stealth mode.
-    
+
         After the expiration of the time all messages will be hidden.
-    
+
         :param bot_id: Bot which should perform the request.
         :param chat_id: Target chat id.
         :param disable_web_client: (BotX default: False) Should messages
@@ -951,7 +935,7 @@ class Client:
         :param total_ttl: (BotX default: OFF) Time of messages burning after
             send.
         """
-    
+
         method = SetStealthMethod(
             bot_id,
             self._http_client,
@@ -963,9 +947,9 @@ class Client:
             ttl_after_read=ttl_after_read,
             total_ttl=total_ttl,
         )
-    
+
         method.execute(payload)
-    
+
     def disable_stealth(
         self,
         *,
@@ -973,20 +957,20 @@ class Client:
         chat_id: UUID,
     ) -> None:
         """Disable stealth model. Hides all messages that were in stealth.
-    
+
         :param bot_id: Bot which should perform the request.
         :param chat_id: Target chat id.
         """
-    
+
         method = DisableStealthMethod(
             bot_id,
             self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPIDisableStealthRequestPayload.from_domain(chat_id=chat_id)
-    
+
         method.execute(payload)
-    
+
     def create_chat(
         self,
         *,
@@ -999,7 +983,7 @@ class Client:
         avatar: str | None = None,
     ) -> UUID:
         """Create chat.
-    
+
         :param bot_id: Bot which should perform the request.
         :param name: Chat visible name.
         :param chat_type: Chat type.
@@ -1008,16 +992,16 @@ class Client:
         :param shared_history: (BotX default: False) Open old chat history for
             new added users.
         :param avatar: Chat avatar in data URL format (RFC 2397).
-    
+
         :return: Created chat uuid.
         """
-    
+
         method = CreateChatMethod(
             bot_id,
             self._http_client,
             self._bot_accounts_storage,
         )
-    
+
         payload = BotXAPICreateChatRequestPayload(
             name=name,
             chat_type=chat_type,
@@ -1027,9 +1011,9 @@ class Client:
             avatar=avatar,
         )
         botx_api_chat_id = method.execute(payload)
-    
+
         return botx_api_chat_id.to_domain()
-    
+
     def create_chat_link(
         self,
         *,
@@ -1040,22 +1024,22 @@ class Client:
         link_ttl: Missing[int | None] = Undefined,
     ) -> ChatLink:
         """Create chat invite link (BotX >= 3.58).
-    
+
         :param bot_id: Bot which should perform the request.
         :param chat_id: Target chat id.
         :param link_type: Link type.
         :param access_code: Link access code (or `None` to make it public).
         :param link_ttl: Link ttl in seconds (or `None` for infinite).
-    
+
         :return: Created chat link.
         """
-    
+
         method = CreateChatLinkMethod(
             bot_id,
             self._http_client,
             self._bot_accounts_storage,
         )
-    
+
         payload = BotXAPICreateChatLinkRequestPayload.from_domain(
             chat_id=chat_id,
             link_type=link_type,
@@ -1063,30 +1047,30 @@ class Client:
             link_ttl=link_ttl,
         )
         botx_api_chat_link = method.execute(payload)
-    
+
         return botx_api_chat_link.to_domain()
-    
+
     def create_thread(self, bot_id: UUID, sync_id: UUID) -> UUID:
         """
         Create thread.
-    
+
         :param bot_id: Bot which should perform the request.
         :param sync_id: Message for which thread should be created
-    
+
         :return: Created thread uuid.
         """
-    
+
         method = CreateThreadMethod(
             bot_id,
             self._http_client,
             self._bot_accounts_storage,
         )
-    
+
         payload = BotXAPICreateThreadRequestPayload.from_domain(sync_id=sync_id)
         botx_api_thread_id = method.execute(payload)
-    
+
         return botx_api_thread_id.to_domain()
-    
+
     def pin_message(
         self,
         *,
@@ -1095,12 +1079,12 @@ class Client:
         sync_id: UUID,
     ) -> None:
         """Pin message in chat.
-    
+
         :param bot_id: Bot which should perform the request.
         :param chat_id: Target chat id.
         :param sync_id: Target sync id.
         """
-    
+
         method = PinMessageMethod(
             bot_id,
             self._http_client,
@@ -1110,9 +1094,9 @@ class Client:
             chat_id=chat_id,
             sync_id=sync_id,
         )
-    
+
         method.execute(payload)
-    
+
     def get_call(
         self,
         *,
@@ -1120,10 +1104,10 @@ class Client:
         call_id: UUID,
     ) -> Call:
         """Get call.
-    
+
         :param bot_id: Bot which should perform the request.
         :param call_id: Call id.
-    
+
         :return: Call.
         """
         method = GetCallMethod(
@@ -1135,9 +1119,9 @@ class Client:
             call_id=call_id,
         )
         botx_call = method.execute(payload)
-    
+
         return botx_call.to_domain()
-    
+
     def get_conference(
         self,
         *,
@@ -1145,10 +1129,10 @@ class Client:
         call_id: UUID,
     ) -> Conference:
         """Get Conference.
-    
+
         :param bot_id: Bot which should perform the request.
         :param call_id: Call id.
-    
+
         :return: Conference.
         """
         method = GetConferenceMethod(
@@ -1160,9 +1144,9 @@ class Client:
             call_id=call_id,
         )
         botx_conference = method.execute(payload)
-    
+
         return botx_conference.to_domain()
-    
+
     def unpin_message(
         self,
         *,
@@ -1170,20 +1154,20 @@ class Client:
         chat_id: UUID,
     ) -> None:
         """Unpin message in chat.
-    
+
         :param bot_id: Bot which should perform the request.
         :param chat_id: Target chat id.
         """
-    
+
         method = UnpinMessageMethod(
             bot_id,
             self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPIUnpinMessageRequestPayload.from_domain(chat_id=chat_id)
-    
+
         method.execute(payload)
-    
+
     def search_user_by_emails(
         self,
         *,
@@ -1193,15 +1177,15 @@ class Client:
         partial_response: bool = False,
     ) -> list[UserFromSearch]:
         """Search user by emails for search.
-    
+
         :param bot_id: Bot which should perform the request.
         :param emails: User emails.
         :param trusts_search: Search users on trusted servers.
         :param partial_response: Return local results if trusted server lookup fails.
-    
+
         :return: Search result with user information.
         """
-    
+
         method = SearchUserByEmailsMethod(
             bot_id,
             self._http_client,
@@ -1212,11 +1196,11 @@ class Client:
             trusts_search=trusts_search,
             partial_response=partial_response,
         )
-    
+
         botx_api_users_from_search = method.execute(payload)
-    
+
         return botx_api_users_from_search.to_domain()
-    
+
     # - Users API -
     def search_user_by_email_post(
         self,
@@ -1227,18 +1211,18 @@ class Client:
         partial_response: bool = False,
     ) -> UserFromSearch:
         """Search user by email for search.
-    
+
         Wraps the single email into a list payload and returns the first result.
         For multiple emails use `search_user_by_emails`.
-    
+
         :param bot_id: Bot which should perform the request.
         :param email: User email.
         :param trusts_search: Search users on trusted servers.
         :param partial_response: Return local results if trusted server lookup fails.
-    
+
         :return: User information.
         """
-    
+
         method = SearchUserByEmailPostMethod(
             bot_id,
             self._http_client,
@@ -1249,11 +1233,11 @@ class Client:
             trusts_search=trusts_search,
             partial_response=partial_response,
         )
-    
+
         botx_api_user_from_search = method.execute(payload)
-    
+
         return botx_api_user_from_search.to_domain()
-    
+
     def search_user_by_email(
         self,
         *,
@@ -1261,26 +1245,26 @@ class Client:
         email: str,
     ) -> UserFromSearch:
         """Search user by email for search.
-    
+
         DEPRECATED. Use `search_user_by_email_post`.
-    
+
         :param bot_id: Bot which should perform the request.
         :param email: User email.
-    
+
         :return: User information.
         """
-    
+
         method = SearchUserByEmailMethod(
             bot_id,
             self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPISearchUserByEmailRequestPayload.from_domain(email=email)
-    
+
         botx_api_user_from_search = method.execute(payload)
-    
+
         return botx_api_user_from_search.to_domain()
-    
+
     def search_user_by_huid(
         self,
         *,
@@ -1288,24 +1272,24 @@ class Client:
         huid: UUID,
     ) -> UserFromSearch:
         """Search user by huid for search.
-    
+
         :param bot_id: Bot which should perform the request.
         :param huid: User huid.
-    
+
         :return: User information.
         """
-    
+
         method = SearchUserByHUIDMethod(
             bot_id,
             self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPISearchUserByHUIDRequestPayload.from_domain(huid=huid)
-    
+
         botx_api_user_from_search = method.execute(payload)
-    
+
         return botx_api_user_from_search.to_domain()
-    
+
     def search_user_by_ad(
         self,
         *,
@@ -1314,14 +1298,14 @@ class Client:
         ad_domain: str,
     ) -> UserFromSearch:
         """Search user by AD login and AD domain for search.
-    
+
         :param bot_id: Bot which should perform the request.
         :param ad_login: User AD login.
         :param ad_domain: User AD domain.
-    
+
         :return: User information.
         """
-    
+
         method = SearchUserByLoginMethod(
             bot_id,
             self._http_client,
@@ -1331,11 +1315,11 @@ class Client:
             ad_login=ad_login,
             ad_domain=ad_domain,
         )
-    
+
         botx_api_user_from_search = method.execute(payload)
-    
+
         return botx_api_user_from_search.to_domain()
-    
+
     def search_user_by_other_id(
         self,
         *,
@@ -1343,13 +1327,13 @@ class Client:
         other_id: str,
     ) -> UserFromSearch:
         """Search user by other identificator for search.
-    
+
         :param bot_id: Bot which should perform the request.
         :param other_id: User other identificator.
-    
+
         :return: User information.
         """
-    
+
         method = SearchUserByOtherIdMethod(
             bot_id,
             self._http_client,
@@ -1358,11 +1342,11 @@ class Client:
         payload = BotXAPISearchUserByOtherIdRequestPayload.from_domain(
             other_id=other_id,
         )
-    
+
         botx_api_user_from_search = method.execute(payload)
-    
+
         return botx_api_user_from_search.to_domain()
-    
+
     def update_user_profile(
         self,
         *,
@@ -1379,7 +1363,7 @@ class Client:
         manager: Missing[str] = Undefined,
     ) -> None:
         """Update user profile.
-    
+
         :param bot_id: Bot which should perform the request.
         :param user_huid: User huid whose profile needs to be updated.
         :param avatar: New user avatar.
@@ -1397,7 +1381,7 @@ class Client:
             self._http_client,
             self._bot_accounts_storage,
         )
-    
+
         payload = BotXAPIUpdateUserProfileRequestPayload.from_domain(
             user_huid=user_huid,
             avatar=avatar,
@@ -1410,9 +1394,9 @@ class Client:
             office=office,
             manager=manager,
         )
-    
+
         method.execute(payload)
-    
+
     @contextmanager
     def users_as_csv(
         self,
@@ -1423,12 +1407,12 @@ class Client:
         botx: bool = False,
     ) -> Iterator[Iterable[UserFromCSV]]:
         """Get a list of users on a CTS.
-    
+
         :param bot_id: Bot which should perform the request.
         :param cts_user: Include CTS users in the list.
         :param unregistered: Include unregistered users in the list.
         :param botx: Include bots in the list.
-    
+
         :yield: The list of users.
         """
         method = UsersAsCSVMethod(
@@ -1441,7 +1425,7 @@ class Client:
             unregistered=unregistered,
             botx=botx,
         )
-    
+
         with ExitStack() as stack:
             tmpdir = stack.enter_context(TemporaryDirectory())
             with NamedTemporaryFile(
@@ -1451,13 +1435,11 @@ class Client:
             ) as write_buffer:
                 write_buffer_path = write_buffer.name
                 method.execute(payload, write_buffer)
-    
+
             with open(write_buffer_path, newline="") as read_buffer:
                 reader = csv.DictReader(read_buffer)
-                yield (
-                    BotXAPIUserFromCSVResult(**row).to_domain() for row in reader
-                )
-    
+                yield (BotXAPIUserFromCSVResult(**row).to_domain() for row in reader)
+
     # - SmartApps API -
     def send_smartapp_event(
         self,
@@ -1471,7 +1453,7 @@ class Client:
         files: Missing[list[File]] = Undefined,
     ) -> None:
         """Send SmartApp event.
-    
+
         :param bot_id: Bot which should perform the request.
         :param chat_id: Target chat id.
         :param data: Event payload.
@@ -1480,7 +1462,7 @@ class Client:
         :param files: Files.
         :param encrypted: Encrypt payload.
         """
-    
+
         method = SmartAppEventMethod(
             bot_id,
             self._http_client,
@@ -1495,9 +1477,9 @@ class Client:
             files=files,
             encrypted=encrypted,
         )
-    
+
         method.execute(payload)
-    
+
     def send_smartapp_notification(
         self,
         bot_id: UUID,
@@ -1508,7 +1490,7 @@ class Client:
         meta: Missing[dict[str, Any]] = Undefined,
     ) -> None:
         """Send SmartApp notification.
-    
+
         :param bot_id: Bot which should perform the request.
         :param chat_id: Target chat id.
         :param smartapp_counter: Value app's counter.
@@ -1516,7 +1498,7 @@ class Client:
         :param opts: Event options.
         :param meta: Meta information.
         """
-    
+
         method = SmartAppNotificationMethod(
             bot_id,
             self._http_client,
@@ -1529,9 +1511,9 @@ class Client:
             opts=opts,
             meta=meta,
         )
-    
+
         method.execute(payload)
-    
+
     def get_smartapps_list(
         self,
         *,
@@ -1539,24 +1521,24 @@ class Client:
         version: Missing[int] = Undefined,
     ) -> tuple[list[SmartApp], int]:
         """Get list of SmartApps on the current CTS.
-    
+
         :param bot_id: Bot which should perform the request.
         :param version: Specific list version.
-    
+
         :return: List of SmartApps, list version.
         """
-    
+
         method = SmartAppsListMethod(
             bot_id,
             self._http_client,
             self._bot_accounts_storage,
         )
         payload = BotXAPISmartAppsListRequestPayload.from_domain(version=version)
-    
+
         botx_api_smartapps_list = method.execute(payload)
-    
+
         return botx_api_smartapps_list.to_domain()
-    
+
     def send_smartapp_manifest(
         self,
         *,
@@ -1570,7 +1552,7 @@ class Client:
         link_regex: Missing[str | None] = Undefined,
     ) -> SmartappManifest:
         """Send smartapp manifest with given parameters.
-    
+
         :param bot_id: Bot which should perform the request.
         :param ios: Smartapp layout for ios clients.
         :param android: Smartapp layout for android clients.
@@ -1579,10 +1561,10 @@ class Client:
         :param store_on_close: Keep smartapp in memory on close.
         :param preload_in_background: Force load smartapp even not pinned.
         :param link_regex: URLs matching this Regex will be opened by the current SmartApp.
-    
+
         :return: Smartapp manifest with the set parameters received from BotX.
         """
-    
+
         method = SmartAppManifestMethod(
             bot_id,
             self._http_client,
@@ -1599,7 +1581,7 @@ class Client:
         )
         smartapp_manifest_response = method.execute(payload)
         return smartapp_manifest_response.to_domain()
-    
+
     def upload_static_file(
         self,
         *,
@@ -1608,24 +1590,24 @@ class Client:
         filename: str,
     ) -> str:
         """Upload static file to file service.
-    
+
         :param bot_id: Bot which should perform the request.
         :param buffer: Buffer to read uploaded file.
         :param filename: File name.
-    
+
         :return: file link.
         """
-    
+
         method = SmartappsUploadFileMethod(
             bot_id,
             self._http_client,
             self._bot_accounts_storage,
         )
-    
+
         botx_api_static_file = method.execute(buffer, filename)
-    
+
         return botx_api_static_file.to_domain()
-    
+
     def send_smartapp_custom_notification(
         self,
         *,
@@ -1638,7 +1620,7 @@ class Client:
         callback_timeout: float | None = None,
     ) -> UUID:
         """Send SmartApp custom notification.
-    
+
         :param bot_id: Bot which should perform the request.
         :param group_chat_id: Target chat id.
         :param title: Notification title.
@@ -1647,10 +1629,10 @@ class Client:
         :param wait_callback: Block method call until callback received.
         :param callback_timeout: Callback timeout in seconds (or `None` for
             endless waiting).
-    
+
         :return: Notification sync_id.
         """
-    
+
         method = SmartAppCustomNotificationMethod(
             bot_id,
             self._http_client,
@@ -1663,16 +1645,16 @@ class Client:
             body=body,
             meta=meta,
         )
-    
+
         botx_api_sync_id = method.execute(
             payload,
             wait_callback,
             callback_timeout,
             self._default_callback_timeout,
         )
-    
+
         return botx_api_sync_id.to_domain()
-    
+
     def send_smartapp_unread_counter(
         self,
         *,
@@ -1683,17 +1665,17 @@ class Client:
         callback_timeout: float | None = None,
     ) -> UUID:
         """Send SmartApp unread counter.
-    
+
         :param bot_id: Bot which should perform the request.
         :param group_chat_id: Target chat id.
         :param counter: Counter value.
         :param wait_callback: Block method call until callback received.
         :param callback_timeout: Callback timeout in seconds (or `None` for
             endless waiting).
-    
+
         :return: Sent message's sync_id.
         """
-    
+
         method = SmartAppUnreadCounterMethod(
             bot_id,
             self._http_client,
@@ -1704,16 +1686,16 @@ class Client:
             group_chat_id=group_chat_id,
             counter=counter,
         )
-    
+
         botx_api_sync_id = method.execute(
             payload,
             wait_callback,
             callback_timeout,
             self._default_callback_timeout,
         )
-    
+
         return botx_api_sync_id.to_domain()
-    
+
     # - Stickers API -
     def create_sticker_pack(
         self,
@@ -1723,14 +1705,14 @@ class Client:
         huid: Missing[UUID] = Undefined,
     ) -> StickerPack:
         """Create empty sticker pack.
-    
+
         :param bot_id: Bot which should perform the request.
         :param name: Sticker pack name.
         :param huid: Sticker pack creator.
-    
+
         :return: Created sticker pack.
         """
-    
+
         method = CreateStickerPackMethod(
             bot_id,
             self._http_client,
@@ -1740,11 +1722,11 @@ class Client:
             name=name,
             huid=huid,
         )
-    
+
         botx_api_sticker_pack = method.execute(payload)
-    
+
         return botx_api_sticker_pack.to_domain()
-    
+
     def add_sticker(
         self,
         *,
@@ -1754,18 +1736,18 @@ class Client:
         buffer: BufferReadable,
     ) -> Sticker:
         """Add sticker in sticker pack.
-    
+
         :param bot_id: Bot which should perform the request.
         :param sticker_pack_id: Sticker pack id to indicate where to add.
         :param emoji: Sticker emoji.
         :param buffer: Sticker image file. Only PNG.
-    
+
         :return: Added sticker.
         """
-    
+
         ensure_file_content_is_png(buffer)
         ensure_sticker_image_size_valid(buffer)
-    
+
         method = AddStickerMethod(
             bot_id,
             self._http_client,
@@ -1776,11 +1758,11 @@ class Client:
             emoji=emoji,
             buffer=buffer,
         )
-    
+
         botx_api_sticker = method.execute(payload)
-    
+
         return botx_api_sticker.to_domain(pack_id=sticker_pack_id)
-    
+
     def delete_sticker(
         self,
         *,
@@ -1789,12 +1771,12 @@ class Client:
         sticker_id: UUID,
     ) -> None:
         """Delete sticker from sticker pack.
-    
+
         :param bot_id: Bot which should perform the request.
         :param sticker_pack_id: Target sticker pack id.
         :param sticker_id: Sticker id which should be deleted.
         """
-    
+
         method = DeleteStickerMethod(
             bot_id,
             self._http_client,
@@ -1804,9 +1786,9 @@ class Client:
             sticker_id=sticker_id,
             sticker_pack_id=sticker_pack_id,
         )
-    
+
         method.execute(payload)
-    
+
     def iterate_by_sticker_packs(
         self,
         *,
@@ -1814,21 +1796,21 @@ class Client:
         user_huid: UUID,
     ) -> Iterable[StickerPackFromList]:
         """Iterate by user sticker packs.
-    
+
         :param bot_id: Bot which should perform the request.
         :param user_huid: User huid.
-    
+
         :yield: Sticker pack.
         """
-    
+
         after = None
-    
+
         method = GetStickerPacksMethod(
             bot_id,
             self._http_client,
             self._bot_accounts_storage,
         )
-    
+
         while True:
             payload = BotXAPIGetStickerPacksRequestPayload.from_domain(
                 huid=user_huid,
@@ -1836,15 +1818,15 @@ class Client:
                 after=after,
             )
             botx_api_sticker_pack_list = method.execute(payload)
-    
+
             sticker_pack_page = botx_api_sticker_pack_list.to_domain()
             after = sticker_pack_page.after
-    
+
             yield from sticker_pack_page.sticker_packs
-    
+
             if not after:
                 break
-    
+
     def get_sticker_pack(
         self,
         *,
@@ -1852,13 +1834,13 @@ class Client:
         sticker_pack_id: UUID,
     ) -> StickerPack:
         """Get sticker pack.
-    
+
         :param bot_id: Bot which should perform the request.
         :param sticker_pack_id: Sticker pack id.
-    
+
         :return: Sticker pack.
         """
-    
+
         method = GetStickerPackMethod(
             bot_id,
             self._http_client,
@@ -1867,30 +1849,30 @@ class Client:
         payload = BotXAPIGetStickerPackRequestPayload.from_domain(
             sticker_pack_id=sticker_pack_id,
         )
-    
+
         botx_api_sticker_pack = method.execute(payload)
-    
+
         return botx_api_sticker_pack.to_domain()
-    
+
     def delete_sticker_pack(self, *, bot_id: UUID, sticker_pack_id: UUID) -> None:
         """Delete existing sticker pack.
-    
+
         :param bot_id: Bot which should perform the request.
         :param sticker_pack_id: Target sticker pack.
         """
-    
+
         method = DeleteStickerPackMethod(
             bot_id,
             self._http_client,
             self._bot_accounts_storage,
         )
-    
+
         payload = BotXAPIDeleteStickerPackRequestPayload.from_domain(
             sticker_pack_id=sticker_pack_id,
         )
-    
+
         method.execute(payload)
-    
+
     def get_sticker(
         self,
         *,
@@ -1899,14 +1881,14 @@ class Client:
         sticker_id: UUID,
     ) -> Sticker:
         """Get sticker.
-    
+
         :param bot_id: Bot which should perform the request.
         :param sticker_pack_id: Sticker pack id.
         :param sticker_id: Sticker id.
-    
+
         :return: Sticker.
         """
-    
+
         method = GetStickerMethod(
             bot_id,
             self._http_client,
@@ -1916,11 +1898,11 @@ class Client:
             sticker_pack_id=sticker_pack_id,
             sticker_id=sticker_id,
         )
-    
+
         botx_api_sticker = method.execute(payload)
-    
+
         return botx_api_sticker.to_domain(pack_id=sticker_pack_id)
-    
+
     def edit_sticker_pack(
         self,
         *,
@@ -1931,16 +1913,16 @@ class Client:
         stickers_order: list[UUID],
     ) -> StickerPack:
         """Edit Sticker pack.
-    
+
         :param bot_id: Bot which should perform the request.
         :param sticker_pack_id: Sticker pack id.
         :param name: Sticker pack name.
         :param preview: Sticker from the set selected as a preview.
         :param stickers_order: Sticker IDs in order they are displayed.
-    
+
         :return: Edited sticker pack.
         """
-    
+
         method = EditStickerPackMethod(
             bot_id,
             self._http_client,
@@ -1952,11 +1934,11 @@ class Client:
             preview=preview,
             stickers_order=stickers_order,
         )
-    
+
         botx_api_sticker_pack = method.execute(payload)
-    
+
         return botx_api_sticker_pack.to_domain()
-    
+
     # - Files API -
     def download_file(
         self,
@@ -1968,14 +1950,14 @@ class Client:
         is_preview: bool = False,
     ) -> None:
         """Download file form file service.
-    
+
         :param bot_id: Bot which should perform the request.
         :param chat_id: Target chat id.
         :param file_id: Async file id.
         :param buffer: Buffer to write downloaded file.
         :param is_preview: If true and file has preview, return it instead of original.
         """
-    
+
         method = DownloadFileMethod(
             bot_id,
             self._http_client,
@@ -1986,9 +1968,9 @@ class Client:
             file_id=file_id,
             is_preview=is_preview,
         )
-    
+
         method.execute(payload, buffer)
-    
+
     def upload_file(
         self,
         *,
@@ -2000,17 +1982,17 @@ class Client:
         caption: Missing[str] = Undefined,
     ) -> File:
         """Upload file to file service.
-    
+
         :param bot_id: Bot which should perform the request.
         :param chat_id: Target chat id.
         :param buffer: Buffer to write downloaded file.
         :param filename: File name.
         :param duration: Video duration.
         :param caption: Text under file.
-    
+
         :return: Meta info of uploaded file.
         """
-    
+
         method = UploadFileMethod(
             bot_id,
             self._http_client,
@@ -2021,11 +2003,11 @@ class Client:
             duration=duration,
             caption=caption,
         )
-    
+
         botx_api_async_file = method.execute(payload, buffer, filename)
-    
+
         return botx_api_async_file.to_domain()
-    
+
     # - OpenID API -
     def refresh_access_token(
         self,
@@ -2035,25 +2017,25 @@ class Client:
         ref: UUID | None = None,
     ) -> None:
         """Refresh OpenID access token.
-    
+
         :param bot_id: Bot which should perform the request.
         :param huid: User huid.
         :param ref: sync_id of the failed event to resend.
         """
-    
+
         method = RefreshAccessTokenMethod(
             bot_id,
             self._http_client,
             self._bot_accounts_storage,
             self._callbacks_manager,
         )
-    
+
         payload = BotXAPIRefreshAccessTokenRequestPayload.from_domain(
             huid=huid,
             ref=ref,
         )
         method.execute(payload)
-    
+
     # - Metrics API -
     def collect_metric(
         self,
@@ -2063,23 +2045,22 @@ class Client:
         chat_id: UUID,
     ) -> None:
         """Collect a new use of the bot function.
-    
+
         :param bot_id: Bot which should perform the request.
         :param bot_function: Name of the bot function.
         :param huids: Users involved in using the function.
         :param chat_id: Chat in which the function was used.
         """
-    
+
         method = CollectBotFunctionMethod(
             bot_id,
             self._http_client,
             self._bot_accounts_storage,
         )
-    
+
         payload = BotXAPICollectBotFunctionRequestPayload.from_domain(
             bot_function=bot_function,
             huids=huids,
             chat_id=chat_id,
         )
         method.execute(payload)
-    
