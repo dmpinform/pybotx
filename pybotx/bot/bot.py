@@ -38,58 +38,23 @@ class Bot:
     def __init__(
         self,
         *,
-        bot_accounts: Sequence[BotAccountWithSecret],
+        bot_accounts_storage: BotAccountsStorage,
+        callbacks_manager: CallbackManager,
+        http_client: urllib3.PoolManager,
         bot_menu: BotMenu | None = None,
-        http_client: urllib3.PoolManager | None = None,
-        default_callback_timeout: float = BOTX_DEFAULT_TIMEOUT,
-        callback_repo: CallbackRepoProto | None = None,
-        auth_version: BotXAuthVersion = BotXAuthVersion.V2,
         handlers: dict[str, Any] | None = None,
     ) -> None:
-        if not bot_accounts:
-            logger.warning("Bot has no bot accounts")
-
         self._bot_menu: BotMenu = bot_menu or BotMenu({})
-        self._default_callback_timeout = default_callback_timeout
-        self._bot_accounts_storage = BotAccountsStorage(
-            list(bot_accounts),
-            auth_version=auth_version,
-        )
-        self._http_client = http_client or urllib3.PoolManager(
-            timeout=urllib3.Timeout(connect=10.0, read=default_callback_timeout),
-            retries=False,
-        )
-
-        if not callback_repo:
-            callback_repo = CallbackMemoryRepo()
-
-        self._callbacks_manager = CallbackManager(callback_repo)
-
-        # Создать Client instance
-        from pybotx.client.client import Client
-
-        self._client = Client(
-            bot_accounts_storage=self._bot_accounts_storage,
-            http_client=self._http_client,
-            callbacks_manager=self._callbacks_manager,
-            default_callback_timeout=self._default_callback_timeout,
-        )
-
-        # Сохранить handlers
+        self._bot_accounts_storage = bot_accounts_storage
+        self._callbacks_manager = callbacks_manager
+        self._http_client = http_client
         self._handlers = handlers or {}
 
-    @property
-    def client(self) -> Any:
-        """Get Client instance for API calls.
-
-        :return: Client instance.
-        """
-        return self._client
-
-    def dispatch_command(self, message: Any) -> None:
+    def dispatch_command(self, message: Any, client: Any) -> None:
         """Dispatch command to registered handler.
 
         :param message: IncomingMessage from BotX.
+        :param client: Client instance for API calls.
         """
         # Извлечь команду из тела сообщения (например, "/echo")
         command = message.body.split()[0] if message.body else ""
@@ -99,7 +64,7 @@ class Bot:
 
         # Вызвать handler если он существует
         if handler:
-            handler.handle(message, self._client)
+            handler.handle(message, client)
 
     def parse_bot_command(
         self,
@@ -208,13 +173,16 @@ class Bot:
     def bot_accounts(self) -> Iterator[BotAccountWithSecret]:
         yield from self._bot_accounts_storage.iter_bot_accounts()
 
-    def fetch_tokens(self) -> None:
-        """Fetch tokens for all bot accounts (only for V1 auth)."""
+    def fetch_tokens(self, client: Any) -> None:
+        """Fetch tokens for all bot accounts (only for V1 auth).
+
+        :param client: Client instance for API calls.
+        """
         if self._bot_accounts_storage.get_auth_version() != BotXAuthVersion.V1:
             return
         for bot_account in self.bot_accounts:
             try:
-                token = self._client.get_token(bot_id=bot_account.id)
+                token = client.get_token(bot_id=bot_account.id)
             except (InvalidBotAccountError, urllib3.exceptions.HTTPError):
                 logger.opt(exception=True).warning(
                     "Can't get token for bot account: "
@@ -224,9 +192,14 @@ class Bot:
 
             self._bot_accounts_storage.set_token(bot_account.id, token)
 
-    def startup(self, *, fetch_tokens: bool = True) -> None:
+    def startup(self, client: Any, *, fetch_tokens: bool = True) -> None:
+        """Initialize bot on startup.
+
+        :param client: Client instance for API calls.
+        :param fetch_tokens: Whether to fetch tokens (V1 auth only).
+        """
         if fetch_tokens:
-            self.fetch_tokens()
+            self.fetch_tokens(client)
 
     def shutdown(self) -> None:
         self._callbacks_manager.stop_callbacks_waiting()

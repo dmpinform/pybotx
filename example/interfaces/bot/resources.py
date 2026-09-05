@@ -2,7 +2,7 @@
 
 import falcon
 
-from pybotx import Bot, IncomingMessage, UnverifiedRequestError
+from pybotx import Bot, Client, IncomingMessage, UnverifiedRequestError
 from pybotx.bot.api.responses.command_accepted import build_command_accepted_response
 from pybotx.bot.api.responses.unverified_request import (
     build_unverified_request_response,
@@ -13,8 +13,9 @@ from pybotx.bot.api.responses.unverified_request import (
 class CommandResource:
     """POST /command — входящие сообщения и системные события."""
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Bot, client: Client):
         self._bot = bot
+        self._client = client
 
     def on_post(self, req: falcon.Request, resp: falcon.Response) -> None:
         try:
@@ -28,7 +29,7 @@ class CommandResource:
             return
 
         if isinstance(bot_command, IncomingMessage):
-            self._bot.dispatch_command(bot_command)
+            self._bot.dispatch_command(bot_command, self._client)
 
         resp.media = build_command_accepted_response()
 
