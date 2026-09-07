@@ -11,7 +11,6 @@ from uuid import UUID
 import urllib3
 
 from pybotx.bot.bot_accounts_storage import BotAccountsStorage
-from pybotx.bot.callbacks.callback_manager import CallbackManager
 from pybotx.buffer import BufferReadable, BufferWritable
 from pybotx.client.bots_api.bot_catalog import (
     BotsListMethod,
@@ -248,20 +247,14 @@ class Client:
         self,
         bot_accounts_storage: BotAccountsStorage,
         http_client: urllib3.PoolManager,
-        callbacks_manager: CallbackManager,
-        default_callback_timeout: float = BOTX_DEFAULT_TIMEOUT,
     ) -> None:
         """Initialize Client.
 
         :param bot_accounts_storage: Storage for bot accounts and auth.
         :param http_client: HTTP client (urllib3.PoolManager) for requests.
-        :param callbacks_manager: Manager for async callbacks.
-        :param default_callback_timeout: Default timeout for callbacks.
         """
         self._bot_accounts_storage = bot_accounts_storage
         self._http_client = http_client
-        self._callbacks_manager = callbacks_manager
-        self._default_callback_timeout = default_callback_timeout
 
     def get_bots_list(
         self,
@@ -293,14 +286,10 @@ class Client:
         self,
         *,
         message: OutgoingMessage,
-        wait_callback: bool = True,
-        callback_timeout: float | None = None,
     ) -> UUID:
         """Send internal notification.
 
         :param message: Built outgoing message.
-        :param wait_callback: Wait for callback.
-        :param callback_timeout: Timeout for waiting for callback.
 
         :return: Notification sync_id.
         """
@@ -319,8 +308,6 @@ class Client:
             stealth_mode=message.stealth_mode,
             send_push=message.send_push,
             ignore_mute=message.ignore_mute,
-            wait_callback=wait_callback,
-            callback_timeout=callback_timeout,
         )
 
     def send_message(
@@ -339,8 +326,6 @@ class Client:
         stealth_mode: Missing[bool] = Undefined,
         send_push: Missing[bool] = Undefined,
         ignore_mute: Missing[bool] = Undefined,
-        wait_callback: bool = True,
-        callback_timeout: float | None = None,
     ) -> UUID:
         """Send message to chat.
 
@@ -361,8 +346,6 @@ class Client:
             devices.
         :param ignore_mute: (BotX default: False) Ignore mute or dnd (do not
             disturb).
-        :param wait_callback: Block method call until callback received.
-        :param callback_timeout: Callback timeout in seconds (or `None` for
             endless waiting).
 
         :return: Notification sync_id.
@@ -372,7 +355,6 @@ class Client:
             bot_id,
             self._http_client,
             self._bot_accounts_storage,
-            self._callbacks_manager,
         )
 
         payload = BotXAPIDirectNotificationRequestPayload.from_domain(
@@ -391,9 +373,6 @@ class Client:
         )
         botx_api_sync_id = method.execute(
             payload,
-            wait_callback,
-            callback_timeout,
-            self._default_callback_timeout,
         )
 
         return botx_api_sync_id.to_domain()
@@ -470,8 +449,6 @@ class Client:
         data: dict[str, Any],
         opts: Missing[dict[str, Any]] = Undefined,
         recipients: Missing[list[UUID]] = Undefined,
-        wait_callback: bool = True,
-        callback_timeout: float | None = None,
     ) -> UUID:
         """Send internal notification.
 
@@ -480,8 +457,6 @@ class Client:
         :param data: Notification payload.
         :param opts: Notification options.
         :param recipients: List of bot uuids, empty for all in chat.
-        :param wait_callback: Wait for callback.
-        :param callback_timeout: Timeout for waiting for callback.
 
         :return: Notification sync_id.
         """
@@ -490,7 +465,6 @@ class Client:
             bot_id,
             self._http_client,
             self._bot_accounts_storage,
-            self._callbacks_manager,
         )
 
         payload = BotXAPIInternalBotNotificationRequestPayload.from_domain(
@@ -501,9 +475,6 @@ class Client:
         )
         botx_api_sync_id = method.execute(
             payload,
-            wait_callback,
-            callback_timeout,
-            self._default_callback_timeout,
         )
 
         return botx_api_sync_id.to_domain()
@@ -1616,8 +1587,6 @@ class Client:
         title: str,
         body: str,
         meta: Missing[dict[str, Any]] = Undefined,
-        wait_callback: bool = True,
-        callback_timeout: float | None = None,
     ) -> UUID:
         """Send SmartApp custom notification.
 
@@ -1626,8 +1595,6 @@ class Client:
         :param title: Notification title.
         :param body: Notification body.
         :param meta: Meta information.
-        :param wait_callback: Block method call until callback received.
-        :param callback_timeout: Callback timeout in seconds (or `None` for
             endless waiting).
 
         :return: Notification sync_id.
@@ -1637,7 +1604,6 @@ class Client:
             bot_id,
             self._http_client,
             self._bot_accounts_storage,
-            self._callbacks_manager,
         )
         payload = BotXAPISmartAppCustomNotificationRequestPayload.from_domain(
             group_chat_id=group_chat_id,
@@ -1648,9 +1614,6 @@ class Client:
 
         botx_api_sync_id = method.execute(
             payload,
-            wait_callback,
-            callback_timeout,
-            self._default_callback_timeout,
         )
 
         return botx_api_sync_id.to_domain()
@@ -1661,16 +1624,12 @@ class Client:
         bot_id: UUID,
         group_chat_id: UUID,
         counter: int,
-        wait_callback: bool = True,
-        callback_timeout: float | None = None,
     ) -> UUID:
         """Send SmartApp unread counter.
 
         :param bot_id: Bot which should perform the request.
         :param group_chat_id: Target chat id.
         :param counter: Counter value.
-        :param wait_callback: Block method call until callback received.
-        :param callback_timeout: Callback timeout in seconds (or `None` for
             endless waiting).
 
         :return: Sent message's sync_id.
@@ -1680,7 +1639,6 @@ class Client:
             bot_id,
             self._http_client,
             self._bot_accounts_storage,
-            self._callbacks_manager,
         )
         payload = BotXAPISmartAppUnreadCounterRequestPayload.from_domain(
             group_chat_id=group_chat_id,
@@ -1689,9 +1647,6 @@ class Client:
 
         botx_api_sync_id = method.execute(
             payload,
-            wait_callback,
-            callback_timeout,
-            self._default_callback_timeout,
         )
 
         return botx_api_sync_id.to_domain()
@@ -2027,7 +1982,6 @@ class Client:
             bot_id,
             self._http_client,
             self._bot_accounts_storage,
-            self._callbacks_manager,
         )
 
         payload = BotXAPIRefreshAccessTokenRequestPayload.from_domain(

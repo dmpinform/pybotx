@@ -15,7 +15,6 @@ from mypy_extensions import Arg
 from pydantic import ValidationError
 
 from pybotx.bot.bot_accounts_storage import BotAccountsStorage
-from pybotx.bot.callbacks.callback_manager import CallbackManager
 from pybotx.client.exceptions.base import BaseClientError
 from pybotx.client.exceptions.callbacks import BotXMethodFailedCallbackReceivedError
 from pybotx.client.exceptions.http import (
@@ -69,12 +68,10 @@ class BotXMethod:
         sender_bot_id: UUID,
         http_client: urllib3.PoolManager,
         bot_accounts_storage: BotAccountsStorage,
-        callbacks_manager: CallbackManager | None = None,
     ) -> None:
         self._bot_id = sender_bot_id
         self._http_client = http_client
         self._bot_accounts_storage = bot_accounts_storage
-        self._callbacks_manager = callbacks_manager
 
     # For MyPy checks
     execute: Callable[..., Any]
@@ -181,43 +178,6 @@ class BotXMethod:
         if not (200 <= response.status < 300):
             raise InvalidBotXStatusCodeError(response)
 
-    def _process_callback(
-        self,
-        sync_id: UUID,
-        wait_callback: bool,
-        callback_timeout: float | None,
-        default_callback_timeout: float,
-    ) -> BotXMethodCallback | None:
-        assert self._callbacks_manager is not None, (
-            "CallbackManager hasn't been passed to this method"
-        )
-
-        self._callbacks_manager.register_expected_callback(sync_id)
-        self._callbacks_manager.create_botx_method_callback(sync_id)
-
-        if callback_timeout is None:
-            callback_timeout = default_callback_timeout
-
-        if not wait_callback:
-            self._callbacks_manager.setup_callback_timeout_alarm(
-                sync_id,
-                callback_timeout,
-            )
-            return None
-
-        callback = self._callbacks_manager.wait_botx_method_callback(
-            sync_id,
-            callback_timeout,
-        )
-
-        if callback.status == "error":
-            error_handler = self.error_callback_handlers.get(callback.reason)
-            if not error_handler:
-                raise BotXMethodFailedCallbackReceivedError(callback)
-
-            error_handler(callback)  # Handler should raise an exception
-
-        return callback
 
     def _log_outgoing_request(
         self,

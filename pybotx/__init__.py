@@ -14,9 +14,15 @@ from pybotx.bot.api.responses.unverified_request import (
     BotAPIUnverifiedRequestResponse,
     build_unverified_request_response,
 )
-from pybotx.bot.bot import Bot
-from pybotx.bot.callbacks.callback_repo_proto import CallbackRepoProto
-from pybotx.bot.command_handler import CommandHandler
+from pybotx.bot.command import Command
+from pybotx.bot.dispatcher import CommandDispatcher
+from pybotx.bot.resources import (
+    BaseResource,
+    CallbackResource,
+    CommandResource,
+    StatusResource,
+)
+from pybotx.bot.app_factory import create_botx_app
 from pybotx.client.client import Client
 from pybotx.bot.exceptions import (
     BotShuttingDownError,
@@ -172,9 +178,12 @@ __all__ = (
     "AttachmentTypes",
     "AttachmentVideo",
     "AttachmentVoice",
-    "Bot",
+    "BaseResource",
+    "CallbackResource",
     "Client",
-    "CommandHandler",
+    "Command",
+    "CommandDispatcher",
+    "CommandResource",
     "BotAPIBotDisabledErrorData",
     "BotAPIBotDisabledResponse",
     "BotAPIMethodFailedCallback",
@@ -202,7 +211,6 @@ __all__ = (
     "CTSLoginEvent",
     "CTSLogoutEvent",
     "CallbackNotReceivedError",
-    "CallbackRepoProto",
     "CantUpdatePersonalChatError",
     "Chat",
     "ChatCreatedEvent",
@@ -274,6 +282,7 @@ __all__ = (
     "SmartappManifestWebLayoutChoices",
     "SmartappManifestWebParams",
     "StatusRecipient",
+    "StatusResource",
     "StealthModeDisabledError",
     "Sticker",
     "StickerPack",
@@ -299,6 +308,7 @@ __all__ = (
     "build_bot_disabled_response",
     "build_command_accepted_response",
     "build_unverified_request_response",
+    "create_botx_app",
 )
 
 logger.disable("pybotx")

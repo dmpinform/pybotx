@@ -69,9 +69,6 @@ class InternalBotNotificationMethod(AuthorizedBotXMethod):
     def execute(
         self,
         payload: BotXAPIInternalBotNotificationRequestPayload,
-        wait_callback: bool,
-        callback_timeout: float | None,
-        default_callback_timeout: float,
     ) -> BotXAPIInternalBotNotificationResponsePayload:
         path = "/api/v4/botx/notifications/internal"
 
@@ -83,13 +80,4 @@ class InternalBotNotificationMethod(AuthorizedBotXMethod):
         api_model = self._verify_and_extract_api_model(
             BotXAPIInternalBotNotificationResponsePayload,
             response,
-        )
-
-        self._process_callback(
-            api_model.result.sync_id,
-            wait_callback,
-            callback_timeout,
-            default_callback_timeout,
-        )
-
-        return api_model
+        )return api_model

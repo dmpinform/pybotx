@@ -1,13 +1,13 @@
 """Кастомные обработчики команд."""
 
-from pybotx import Client, CommandHandler, IncomingMessage
+from pybotx import Client, Command, IncomingMessage
 
 
-class SendMailHandler(CommandHandler):
+class SendMailHandler(Command):
     """Кастомный обработчик для отправки email."""
 
-    def handle(self, message: IncomingMessage, client: Client) -> None:
-        """Handle send_mail command.
+    def execute(self, message: IncomingMessage, client: Client) -> None:
+        """Execute send_mail command.
 
         :param message: Incoming message from BotX.
         :param client: Client instance for sending responses.

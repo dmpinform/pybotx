@@ -41,9 +41,6 @@ class SmartAppUnreadCounterMethod(AuthorizedBotXMethod):
     def execute(
         self,
         payload: BotXAPISmartAppUnreadCounterRequestPayload,
-        wait_callback: bool,
-        callback_timeout: float | None,
-        default_callback_timeout: float,
     ) -> BotXAPISmartAppUnreadCounterResponsePayload:
         path = "/api/v4/botx/smartapps/unread_counter"
 
@@ -56,13 +53,4 @@ class SmartAppUnreadCounterMethod(AuthorizedBotXMethod):
         api_model = self._verify_and_extract_api_model(
             BotXAPISmartAppUnreadCounterResponsePayload,
             response,
-        )
-
-        self._process_callback(
-            api_model.result.sync_id,
-            wait_callback,
-            callback_timeout,
-            default_callback_timeout,
-        )
-
-        return api_model
+        )return api_model

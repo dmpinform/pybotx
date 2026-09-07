@@ -1,0 +1,80 @@
+"""Callback resource for handling async results from BotX API."""
+
+from collections.abc import Callable
+from typing import Any
+
+import falcon
+from pydantic import TypeAdapter
+
+from pybotx.bot.api.responses.unverified_request import (
+    build_unverified_request_response,
+)
+from pybotx.bot.bot_accounts_storage import BotAccountsStorage
+from pybotx.bot.exceptions import UnverifiedRequestError
+from pybotx.bot.resources.base_resource import BaseResource
+from pybotx.logger import logger
+from pybotx.models.method_callbacks import BotXMethodCallback
+
+
+class CallbackResource(BaseResource):
+    """POST /notification/callback — async-результаты от BotX."""
+
+    def __init__(
+        self,
+        bot_accounts_storage: BotAccountsStorage,
+        callback_handler: Callable[[BotXMethodCallback], None] | None = None,
+        verify_requests: bool = True,
+    ) -> None:
+        """Initialize callback resource.
+
+        :param bot_accounts_storage: BotAccountsStorage instance.
+        :param callback_handler: Optional handler function to process callbacks.
+        :param verify_requests: Enable JWT verification.
+        """
+        super().__init__(bot_accounts_storage, verify_requests)
+        self._callback_handler = callback_handler
+
+    def on_post(self, req: falcon.Request, resp: falcon.Response) -> None:
+        """Handle POST /notification/callback request.
+
+        :param req: Falcon request.
+        :param resp: Falcon response.
+        """
+        try:
+            callback = self._parse_callback(
+                req.media,
+                dict(req.headers),
+            )
+        except UnverifiedRequestError:
+            resp.status = falcon.HTTP_401
+            resp.media = build_unverified_request_response()
+            return
+
+        # Вызвать handler если он есть
+        if self._callback_handler:
+            self._callback_handler(callback)
+
+        resp.media = {"status": "ok"}
+
+    def _parse_callback(
+        self,
+        raw_callback: dict[str, Any],
+        headers: dict[str, str],
+    ) -> BotXMethodCallback:
+        """Parse raw callback into domain object.
+
+        :param raw_callback: Raw JSON dict from BotX.
+        :param headers: HTTP headers for verification.
+
+        :return: BotXMethodCallback (success or error).
+        :raises UnverifiedRequestError: If verification fails.
+        """
+        logger.debug("Got callback: {callback}", callback=raw_callback)
+
+        # Verify request
+        self._verify_request(headers)
+
+        # Parse callback
+        callback = TypeAdapter(BotXMethodCallback).validate_python(raw_callback)
+
+        return callback

@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from pybotx.client.client import Client
 
 
-class CommandHandler:
+class Command:
     """Базовый обработчик команд."""
 
     def __init__(self, usecase: Any) -> None:
@@ -18,8 +18,8 @@ class CommandHandler:
         """
         self._usecase = usecase
 
-    def handle(self, message: IncomingMessage, client: "Client") -> None:
-        """Handle incoming message by executing UseCase.
+    def execute(self, message: IncomingMessage, client: "Client") -> None:
+        """Execute command by running UseCase.
 
         :param message: Incoming message from BotX.
         :param client: Client instance for sending responses.
