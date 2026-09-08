@@ -45,12 +45,15 @@ class StatusResource(BaseResource):
         """
         try:
             status = self._get_status(
-                dict(req.params),
-                dict(req.headers),
+                {
+                    key: value if isinstance(value, str) else value[0]
+                    for key, value in req.params.items()
+                },
+                {key.lower(): value for key, value in req.headers.items()},
             )
-        except UnverifiedRequestError:
+        except UnverifiedRequestError as exc:
             resp.status = falcon.HTTP_401
-            resp.media = build_unverified_request_response()
+            resp.media = build_unverified_request_response(str(exc))
             return
 
         resp.media = status

@@ -34,10 +34,6 @@ class BotXAPISmartAppUnreadCounterResponsePayload(VerifiedPayloadBaseModel):
 
 
 class SmartAppUnreadCounterMethod(AuthorizedBotXMethod):
-    error_callback_handlers = {
-        **AuthorizedBotXMethod.error_callback_handlers,
-    }
-
     def execute(
         self,
         payload: BotXAPISmartAppUnreadCounterRequestPayload,
@@ -53,4 +49,5 @@ class SmartAppUnreadCounterMethod(AuthorizedBotXMethod):
         api_model = self._verify_and_extract_api_model(
             BotXAPISmartAppUnreadCounterResponsePayload,
             response,
-        )return api_model
+        )
+        return api_model

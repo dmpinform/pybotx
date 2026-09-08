@@ -32,7 +32,7 @@ class BotXAPIAddAdminResponsePayload(VerifiedPayloadBaseModel):
     status: Literal["ok"]
 
 
-def bad_request_error_handler(response: urllib3.HTTPResponse) -> NoReturn:
+def bad_request_error_handler(response: urllib3.BaseHTTPResponse) -> NoReturn:
     reason = json.loads(response.data).get("reason")
 
     if reason == "chat_members_not_modifiable":

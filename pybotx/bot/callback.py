@@ -19,7 +19,5 @@ class Callback:
         """Execute command by running UseCase.
 
         :param message: Incoming message from BotX.
-        :param client: Client instance for sending responses.
         """
-        # Выполнить usecase
         self._usecase.execute(message)

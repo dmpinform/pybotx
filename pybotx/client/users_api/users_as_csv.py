@@ -2,6 +2,7 @@ from pybotx.buffer import BufferWritable
 from pybotx.client.authorized_botx_method import AuthorizedBotXMethod
 from pybotx.client.botx_method import response_exception_thrower
 from pybotx.client.exceptions.users import NoUserKindSelectedError
+from pybotx.constants import CHUNK_SIZE
 from pybotx.models.api_base import UnverifiedPayloadBaseModel
 
 
@@ -43,5 +44,7 @@ class UsersAsCSVMethod(AuthorizedBotXMethod):
             params=payload.jsonable_dict(),
         ) as response:
             # https://github.com/nedbat/coveragepy/issues/1223
-            for chunk in response.iter_bytes():  # pragma: no branch
+            for chunk in response.stream(amt=CHUNK_SIZE):  # pragma: no branch
                 buffer.write(chunk)
+
+        buffer.seek(0)

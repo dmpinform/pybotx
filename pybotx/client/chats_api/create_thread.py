@@ -35,7 +35,7 @@ class BotXAPICreateThreadResponsePayload(VerifiedPayloadBaseModel):
         return self.result.thread_id
 
 
-def conflict_error_handler(response: urllib3.HTTPResponse) -> NoReturn:
+def conflict_error_handler(response: urllib3.BaseHTTPResponse) -> NoReturn:
     reason = json.loads(response.data).get("reason")
 
     if reason == "thread_already_created":

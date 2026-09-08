@@ -19,7 +19,7 @@ class AuthorizedBotXMethod(BotXMethod):
         self,
         *args: Any,
         **kwargs: Any,
-    ) -> urllib3.HTTPResponse:
+    ) -> urllib3.BaseHTTPResponse:
         headers = kwargs.pop("headers", {})
         self._add_authorization_headers(headers)
 
@@ -30,7 +30,7 @@ class AuthorizedBotXMethod(BotXMethod):
         self,
         *args: Any,
         **kwargs: Any,
-    ) -> Iterator[urllib3.HTTPResponse]:
+    ) -> Iterator[urllib3.BaseHTTPResponse]:
         headers = kwargs.pop("headers", {})
         self._add_authorization_headers(headers)
 

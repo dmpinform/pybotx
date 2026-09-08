@@ -2,7 +2,7 @@
 
 Синхронная Python-библиотека для работы с BotX API.
 
-Библиотека отвечает за три вещи: разбор входящих команд, формирование исходящих запросов к BotX и верификацию подписей. Маршрутизация, обработка ошибок и управление конкурентностью остаются на стороне приложения.
+Библиотека отвечает за три вещи: разбор входящих команд, формирование исходящих запросов к BotX и верификацию подписей. Маршрутизация HTTP-запросов, DI и запуск сервера остаются на стороне приложения.
 
 ## Установка
 
@@ -12,35 +12,24 @@ pip install pybotx
 
 ## Архитектура
 
-Библиотека разделена на три основных компонента:
-
-- **`Bot`** — диспетчеризация входящих запросов, верификация JWT, жизненный цикл
-- **`Client`** — отправка API запросов к BotX (messages, chats, files, users и т.д.)
-- **`CommandHandler`** — базовый класс для обработчиков команд
+- **`Client`** — синхронный HTTP-клиент (на `urllib3`) для запросов к BotX API (сообщения, чаты, файлы, пользователи и т.д.). Хранит `BotAccountsStorage` — аккаунты бота и кэш токенов авторизации.
+- **`create_botx_app(...)`** — фабрика, собирающая Falcon WSGI-приложение с тремя эндпоинтами (`/command`, `/status`, `/notification/callback`). Принимает уже созданный `Client` и переиспользует его `BotAccountsStorage`, чтобы не заводить второй, несинхронизированный кэш токенов.
+- **`Command`/`Callback`** — тонкие обёртки, которые получают разобранный `IncomingMessage`/callback от Falcon-ресурса и передают его в юзкейс приложения (`usecase.execute(message)`). Маршрутизация к конкретному юзкейсу, доступ к `Client` и формирование ответа — ответственность самого юзкейса, а не библиотеки.
 
 ```
-┌─────────────┐
-│   BotX API  │
-└──────┬──────┘
-       │
-       │ HTTP
-       ▼
-┌─────────────┐         ┌──────────────┐
-│     Bot     │◄────────┤ BotAccounts  │
-│             │         │   Storage    │
-│ - parse     │         └──────┬───────┘
-│ - verify    │                │ shared
-│ - dispatch  │                │
-└──────┬──────┘                │
-       │ owns                  │
-       ▼                       │
-┌─────────────┐                │
-│   Client    │◄───────────────┘
-│             │
-│ - send_msg  │
-│ - create    │
-│ - search    │
-└─────────────┘
+                    BotX API
+                       │ HTTP
+                       ▼
+              create_botx_app()            ┌──────────────────┐
+       (Falcon WSGI: /command, /status,    │ BotAccountsStorage│
+              /notification/callback)  ◄───┤  (shared cache)   │
+                       │ dispatch           └─────────┬─────────┘
+                       ▼                               │
+               Command / Callback                      │
+                       │ usecase.execute(message)       │
+                       ▼                               │
+                    UseCase  ───────────► Client ◄──────┘
+                                      (DI, отправка ответа)
 ```
 
 ## Концепция
@@ -53,549 +42,198 @@ BotX общается с ботом через три HTTP-эндпоинта:
 | `GET` | `/status` | Меню бота (список команд) |
 | `POST` | `/notification/callback` | Async-результаты от BotX |
 
-Приложение регистрирует эти эндпоинты в любом WSGI/ASGI-фреймворке и делегирует обработку объекту `Bot`.
+`create_botx_app()` регистрирует все три маршрута в Falcon-приложении. Запускать это WSGI-приложение (например, через `waitress.serve`) и связывать всё вместе (создавать `Client`, юзкейсы, `Command`/`Callback`) — задача composite root приложения, см. `example/`.
 
 ## Быстрый старт
 
-### 1. Создание бота
-
-```python
-from uuid import UUID
-from pybotx import Bot, BotAccountWithSecret, BotMenu, CommandHandler
-
-# UseCase
-class EchoUseCase:
-    def execute(self, text: str) -> str:
-        return text
-
-echo = EchoUseCase()
-
-# Bot с handlers
-bot = Bot(
-    bot_accounts=[
-        BotAccountWithSecret(
-            id=UUID("ffffffff-ffff-ffff-ffff-ffffffffffff"),
-            cts_url="https://cts.example.com",
-            secret_key="your-secret-key",
-        )
-    ],
-    bot_menu=BotMenu({
-        "/echo": "Вернуть сообщение обратно",
-        "/help": "Список команд",
-    }),
-    handlers={
-        "/echo": CommandHandler(echo),
-    },
-)
-```
-
-### 2. Жизненный цикл
-
-```python
-bot.startup()   # получить токены при BotXAuthVersion.V1
-# ... сервер обрабатывает запросы ...
-bot.shutdown()  # закрыть HTTP-клиент, отменить ожидание колбэков
-```
-
-### 3. Разбор входящей команды
-
-`parse_bot_command` принимает тело POST-запроса и заголовки, проверяет подпись и возвращает типизированный объект.
-
-```python
-from pybotx import Bot, IncomingMessage, UnverifiedRequestError
-
-bot_command = bot.parse_bot_command(
-    request.json,
-    request_headers=dict(request.headers),
-)
-
-if isinstance(bot_command, IncomingMessage):
-    print(bot_command.body)      # "/echo hello"
-    print(bot_command.argument)  # "hello"
-    print(bot_command.bot.id)    # UUID бота
-    print(bot_command.chat.id)   # UUID чата
-    print(bot_command.sender.huid)
-    
-    # Автоматическая диспетчеризация
-    bot.dispatch_command(bot_command)
-```
-
-При невалидной подписи поднимается `UnverifiedRequestError`.
-
-### 4. Статус-эндпоинт
-
-```python
-status = bot.get_raw_status(
-    dict(request.query_params),
-    request_headers=dict(request.headers),
-)
-# status — готовый dict, сериализуется в JSON
-```
-
-### 5. Колбэк-эндпоинт
-
-BotX присылает результат async-метода (например, `send_message`) отдельным POST-запросом. `parse_callback` регистрирует его в менеджере колбэков — поток, вызвавший `send_message`, разблокируется.
-
-```python
-bot.parse_callback(
-    request.json,
-    request_headers=dict(request.headers),
-)
-```
-
-### 6. Отправка сообщения через Client
+### 1. Создать `Client`
 
 ```python
 from uuid import UUID
 
-# Client доступен через bot.client
-bot.client.send_message(
-    bot_id=UUID("ffffffff-ffff-ffff-ffff-ffffffffffff"),
-    chat_id=UUID("30dc1980-643a-00ad-37fc-7cc10d74e935"),
-    body="Привет!",
-)
-```
+import urllib3
 
-По умолчанию вызов блокируется до получения колбэка от BotX (`wait_callback=True`). Для серверов BotX ≥ 3.58 можно использовать `send_message_sync` — прямой ответ без колбэка.
-
-## CommandHandler
-
-`CommandHandler` — базовый класс для обработчиков команд. Автоматически:
-- Извлекает аргументы из `message.body`
-- Вызывает `usecase.execute(*args)`
-- Отправляет результат через `client.send_message()`
-
-### Базовое использование
-
-```python
-from pybotx import CommandHandler
-
-class EchoUseCase:
-    def execute(self, text: str) -> str:
-        return text
-
-bot = Bot(
-    bot_accounts=[...],
-    handlers={
-        "/echo": CommandHandler(EchoUseCase()),
-    },
-)
-```
-
-### Кастомный handler
-
-Наследуйте `CommandHandler` для сложной логики:
-
-```python
-from pybotx import CommandHandler, Client, IncomingMessage
-
-class NotifyHandler(CommandHandler):
-    def __init__(self, notify_usecase):
-        super().__init__(notify_usecase)
-    
-    def handle(self, message: IncomingMessage, client: Client) -> None:
-        # Кастомная обработка
-        args = self._parse_args(message.body)
-        
-        # Выполнить usecase
-        self._usecase.execute(args[0])
-        
-        # Кастомный ответ
-        client.send_message(
-            bot_id=message.bot.id,
-            chat_id=message.chat.id,
-            body="✅ Уведомление отправлено",
-        )
-
-bot = Bot(
-    handlers={
-        "/notify": NotifyHandler(notify_usecase),
-    },
-)
-```
-
-## Паттерны интеграции
-
-### Паттерн 1 — CommandHandler (Рекомендуется)
-
-Подходит для простых команд с минимальной логикой.
-
-```python
-from pybotx import Bot, BotAccountWithSecret, CommandHandler
-
-# UseCases
-class EchoUseCase:
-    def execute(self, text: str) -> str:
-        return text
-
-class HelpUseCase:
-    def execute(self) -> str:
-        return "Доступные команды: /echo, /help"
-
-# Сборка
-bot = Bot(
-    bot_accounts=[...],
-    handlers={
-        "/echo": CommandHandler(EchoUseCase()),
-        "/help": CommandHandler(HelpUseCase()),
-    },
-)
-```
-
-### Паттерн 2 — Наблюдатель (Observer)
-
-Подходит, когда бот — канал доставки уведомлений от фоновых процессов. UseCase не знает о боте; внешний receiver подписывается на события.
-
-```python
-# usecases/notify.py
-from classic.signals import Hub
-from pydantic.dataclasses import dataclass
-
-@dataclass
-class Notification:
-    text: str
-
-class NotifyUseCase:
-    def __init__(self, hub: Hub) -> None:
-        self._hub = hub
-    
-    def execute(self, text: str) -> None:
-        # Отправить событие всем подписчикам
-        self._hub.notify(Notification(text=text))
-
-# receivers.py
-from uuid import UUID
-from classic.signals import Hub
 from pybotx import Client
 
-class Receivers:
-    def __init__(self, hub: Hub, client: Client):
-        self._client = client
-        # Подписаться на события
-        hub.add_reaction(Notification, self.send_to_botx)
-    
-    def send_to_botx(self, notification: Notification) -> None:
-        self._client.send_message(
-            bot_id=UUID("..."),
-            chat_id=UUID("..."),
-            body=notification.text,
-        )
-
-# composite.py
-hub = Hub()
-bot = Bot(bot_accounts=[...])
-notify_uc = NotifyUseCase(hub)
-receivers = Receivers(hub, bot.client)
-
-# Теперь любой вызов notify_uc.execute("текст") отправит сообщение в BotX
+client = Client(
+    bot_id=UUID("ffffffff-ffff-ffff-ffff-ffffffffffff"),
+    cts_url="https://cts.example.com",
+    secret_key="your-secret-key",
+    http_client=urllib3.PoolManager(),
+    # auth_version=BotXAuthVersion.V2,  # по умолчанию
+)
 ```
 
-**Преимущества:**
-- UseCase не зависит от BotX (можно добавить другие каналы: email, SMS)
-- Множественные подписчики на одно событие
-- Слабая связанность компонентов
+### 2. Написать юзкейс
 
-## Полный пример (Falcon + Waitress)
+Юзкейс получает `Client` через DI-конструктор и весь `IncomingMessage` в `execute` — этого достаточно, чтобы прочитать аргументы команды (`message.argument`) и ответить в тот же чат (`message.bot.id`/`message.chat.id`):
 
-Минимальное рабочее приложение находится в `example/`. Запуск:
+```python
+from pybotx import Client, IncomingMessage
+
+
+class EchoUseCase:
+    def __init__(self, client: Client) -> None:
+        self._client = client
+
+    def execute(self, message: IncomingMessage) -> None:
+        self._client.send_message(
+            bot_id=message.bot.id,
+            chat_id=message.chat.id,
+            body=message.argument or "echo: (empty)",
+        )
+```
+
+### 3. Обернуть в `Command`/`Callback` и собрать приложение
+
+```python
+from pybotx import Callback, Command, create_botx_app
+
+echo = EchoUseCase(client)
+
+application = create_botx_app(
+    client=client,
+    commands={"/echo": Command(echo)},
+    callback=Callback(handle_callback_usecase),
+)
+```
+
+### 4. Запустить
+
+```python
+from waitress import serve
+
+serve(application, host="0.0.0.0", port=8000)
+```
+
+## `Command`/`Callback`
+
+`Command(usecase)` и `Callback(usecase)` — единственная обязанность которых — вызвать `usecase.execute(message)` с тем сообщением/callback'ом, что разобрал и провалидировал Falcon-ресурс. Юзкейс сам решает, что делать: отправить ответ через `Client`, записать в БД, опубликовать событие и т.д.
+
+Если нужна нестандартная логика диспетчеризации (например, отправить дополнительное подтверждение в чат), наследуйте `Command`:
+
+```python
+from pybotx import Client, Command
+from pybotx.models.commands import BotCommand
+
+
+class SendMailCommand(Command):
+    def __init__(self, usecase, client: Client) -> None:
+        super().__init__(usecase)
+        self._client = client
+
+    def execute(self, message: BotCommand) -> None:
+        result = self._usecase.run(message)
+        self._client.send_message(
+            bot_id=message.bot.id,
+            chat_id=message.chat.id,
+            body=f"Email sent: {result}",
+        )
+```
+
+### Паттерн «Наблюдатель» для фоновых уведомлений
+
+Когда юзкейс не должен напрямую зависеть от `Client` (например, отправка уведомления может прийти не только из команды бота, но и из другого канала), используйте `classic.signals.Hub`: юзкейс публикует сигнал, а подписчик (`Receivers`) отправляет сообщение через `Client`. Пример — `example/app/usecases/notify.py` + `example/interfaces/bot/receivers.py`: `Notify.execute` кладёт `bot_id`/`chat_id` реального входящего сообщения в `Notification`, а `Receivers` только достаёт их из уведомления — без захардкоженных констант.
+
+## `create_botx_app`
+
+```python
+def create_botx_app(
+    client: Client,
+    commands: dict[str, Command],
+    callback: Callback,
+    events: dict[type, Command] | None = None,
+    bot_menu: BotMenu | None = None,
+    verify_requests: bool = True,
+) -> falcon.App:
+    ...
+```
+
+| Параметр | Описание |
+|----------|----------|
+| `client` | Уже созданный `Client`; его `BotAccountsStorage` переиспользуется для верификации входящих JWT. |
+| `commands` | Команды пользователя (`/echo`, `/help`, ...) → `Command`. |
+| `callback` | Обработчик async-результатов BotX (`/notification/callback`). |
+| `events` | Системные события (`ChatCreatedEvent`, `AddedToChatEvent`, ...) → `Command`, см. ниже. |
+| `bot_menu` | Меню для `/status` (по умолчанию пустое). |
+| `verify_requests` | Отключение верификации JWT (для тестов). |
+
+## Системные события
+
+`/command` может получать не только `IncomingMessage`, но и системные события (`ChatCreatedEvent`, `AddedToChatEvent`, `DeletedFromChatEvent` и другие из `pybotx.models.system_events`). Регистрируются они так же, как и обычные команды — через словарь `type → Command`, только ключ — класс события:
+
+```python
+from pybotx import ChatCreatedEvent, Command, create_botx_app
+
+application = create_botx_app(
+    client=client,
+    commands={"/echo": Command(echo)},
+    callback=Callback(handle_callback),
+    events={ChatCreatedEvent: Command(on_chat_created_usecase)},
+)
+```
+
+Юзкейс, зарегистрированный в `events`, получает в `execute()` соответствующий объект события вместо `IncomingMessage`.
+
+## Пример приложения
+
+Полностью собранное приложение — composite root, юзкейсы, кастомный `Command`, паттерн «Наблюдатель» — находится в `example/`. Это канонический референс того, как использовать библиотеку в реальном проекте. Запуск:
 
 ```bash
 python -m example.composite.bot
 ```
 
-### `example/interfaces/bot/resources.py`
-
-```python
-import falcon
-from pybotx import Bot, IncomingMessage, UnverifiedRequestError
-from pybotx.bot.api.responses.command_accepted import build_command_accepted_response
-from pybotx.bot.api.responses.unverified_request import build_unverified_request_response
-
-class CommandResource:
-    def __init__(self, bot: Bot):
-        self._bot = bot
-    
-    def on_post(self, req: falcon.Request, resp: falcon.Response) -> None:
-        try:
-            bot_command = self._bot.parse_bot_command(
-                req.media,
-                request_headers=dict(req.headers),
-            )
-        except UnverifiedRequestError:
-            resp.status = falcon.HTTP_401
-            resp.media = build_unverified_request_response()
-            return
-
-        if isinstance(bot_command, IncomingMessage):
-            # Автоматическая диспетчеризация в handlers
-            self._bot.dispatch_command(bot_command)
-
-        resp.media = build_command_accepted_response()
-
-class StatusResource:
-    def __init__(self, bot: Bot):
-        self._bot = bot
-    
-    def on_get(self, req: falcon.Request, resp: falcon.Response) -> None:
-        try:
-            resp.media = self._bot.get_raw_status(
-                dict(req.params),
-                request_headers=dict(req.headers),
-            )
-        except UnverifiedRequestError:
-            resp.status = falcon.HTTP_401
-            resp.media = build_unverified_request_response()
-
-class CallbackResource:
-    def __init__(self, bot: Bot):
-        self._bot = bot
-    
-    def on_post(self, req: falcon.Request, resp: falcon.Response) -> None:
-        try:
-            self._bot.parse_callback(req.media, request_headers=dict(req.headers))
-        except UnverifiedRequestError:
-            resp.status = falcon.HTTP_401
-            resp.media = build_unverified_request_response()
-            return
-        resp.media = {"status": "ok"}
-```
-
-### `example/composite/bot.py`
-
-```python
-import falcon
-from waitress import serve
-from pybotx import Bot, BotAccountWithSecret, BotMenu, CommandHandler
-from example.app.usecases.echo import EchoUseCase
-from example.interfaces.bot.resources import CommandResource, StatusResource, CallbackResource
-
-# UseCases
-echo = EchoUseCase()
-
-# Bot
-bot = Bot(
-    bot_accounts=[
-        BotAccountWithSecret(
-            id=UUID("ffffffff-ffff-ffff-ffff-ffffffffffff"),
-            cts_url="https://cts.example.com",
-            secret_key="secret",
-        )
-    ],
-    bot_menu=BotMenu({
-        "/echo": "Вернуть сообщение обратно",
-    }),
-    handlers={
-        "/echo": CommandHandler(echo),
-    },
-)
-
-# Falcon app
-def create_app() -> falcon.App:
-    app = falcon.App()
-    app.add_route("/command", CommandResource(bot))
-    app.add_route("/status", StatusResource(bot))
-    app.add_route("/notification/callback", CallbackResource(bot))
-    return app
-
-application = create_app()
-
-if __name__ == "__main__":
-    bot.startup()
-    try:
-        serve(application, host="0.0.0.0", port=8000)
-    finally:
-        bot.shutdown()
-```
-
-## Системные события
-
-Помимо `IncomingMessage` `parse_bot_command` может вернуть системное событие. Обработка через `isinstance`:
-
-```python
-from pybotx import (
-    AddedToChatEvent,
-    ChatCreatedEvent,
-    DeletedFromChatEvent,
-    IncomingMessage,
-)
-
-bot_command = bot.parse_bot_command(raw, request_headers=headers)
-
-if isinstance(bot_command, IncomingMessage):
-    bot.dispatch_command(bot_command)
-elif isinstance(bot_command, AddedToChatEvent):
-    on_added_to_chat(bot_command)
-elif isinstance(bot_command, ChatCreatedEvent):
-    on_chat_created(bot_command)
-```
-
-## Конфигурация `Bot`
-
-| Параметр | Тип | По умолчанию | Описание |
-|----------|-----|-------------|----------|
-| `bot_accounts` | `Sequence[BotAccountWithSecret]` | — | Список аккаунтов бота |
-| `bot_menu` | `BotMenu \| None` | `BotMenu({})` | Меню команд для `/status` |
-| `handlers` | `dict[str, CommandHandler] \| None` | `{}` | Обработчики команд |
-| `http_client` | `urllib3.PoolManager \| None` | новый клиент | Кастомный HTTP-клиент (urllib3) |
-| `default_callback_timeout` | `float` | 60 с | Таймаут ожидания колбэка |
-| `callback_repo` | `CallbackRepoProto \| None` | in-memory | Хранилище колбэков |
-| `auth_version` | `BotXAuthVersion` | `V2` | Версия аутентификации |
+Структура:
+- `example/composite/bot.py` — точка сборки: создаёт `Client`, юзкейсы, `Command`/`Callback`, вызывает `create_botx_app`, запускает `waitress.serve`.
+- `example/app/usecases/` — юзкейсы (`EchoUseCase`, `Notify`, `SendMail`, `HandleCallback`).
+- `example/interfaces/bot/` — кастомный `Command` (`SendMailCommand`) и подписчик паттерна «Наблюдатель» (`Receivers`).
 
 ## Аутентификация
 
 | Версия | Описание |
 |--------|----------|
-| `BotXAuthVersion.V2` | JWT подписывается секретом бота, `iss` = UUID бота. Токен не нужен. |
-| `BotXAuthVersion.V1` | Токен получается от BotX-сервера при `startup()`. |
+| `BotXAuthVersion.V2` (по умолчанию) | JWT подписывается секретом бота, `iss` = UUID бота. Токен от сервера не нужен. |
+| `BotXAuthVersion.V1` | Токен запрашивается у BotX-сервера лениво, при первом исходящем запросе, и кэшируется в `BotAccountsStorage`. |
 
-**Как это работает:**
-
-- **Bot** верифицирует входящие JWT запросы через `_verify_request()`
-- **Client** добавляет Authorization header в исходящие запросы
-- **BotAccountsStorage** — общий объект между Bot и Client, хранит аккаунты и секреты
+`create_botx_app` верифицирует входящие JWT-запросы к `/command`, `/status`, `/notification/callback` через общий с `Client` `BotAccountsStorage`. `Client` добавляет `Authorization`-заголовок к исходящим запросам.
 
 ## Client API
 
-Client доступен через `bot.client` и предоставляет все методы для работы с BotX API.
-
-### Отправка сообщений
+Полный список методов — в `pybotx/client/client.py`. Основные группы:
 
 ```python
-# Сообщение в чат (async, ждёт колбэк)
-bot.client.send_message(bot_id=..., chat_id=..., body="текст")
-
-# Сообщение без колбэка (BotX >= 3.58)
-bot.client.send_message_sync(bot_id=..., chat_id=..., body="текст")
-
-# Редактирование сообщения
-bot.client.edit_message(bot_id=..., sync_id=..., body="новый текст")
-
-# Ответ на сообщение
-bot.client.reply_message(bot_id=..., sync_id=..., body="ответ")
-
-# Удаление сообщения
-bot.client.delete_message(bot_id=..., sync_id=...)
-```
-
-### Управление чатами
-
-```python
-# Создать чат
-chat_id = bot.client.create_chat(
-    bot_id=...,
-    name="Новый чат",
-    members=[user_huid1, user_huid2],
-)
-
-# Информация о чате
-chat_info = bot.client.chat_info(bot_id=..., chat_id=...)
-
-# Добавить пользователей
-bot.client.add_users_to_chat(bot_id=..., chat_id=..., huids=[...])
-
-# Удалить пользователей
-bot.client.remove_users_from_chat(bot_id=..., chat_id=..., huids=[...])
-```
-
-### Поиск пользователей
-
-```python
-# По email
-user = bot.client.search_user_by_email(bot_id=..., email="user@example.com")
-
-# По HUID
-user = bot.client.search_user_by_huid(bot_id=..., huid=...)
-
-# По логину
-user = bot.client.search_user_by_ad(bot_id=..., ad_login="user")
-```
-
-### Работа с файлами
-
-```python
-# Загрузить файл
-from pathlib import Path
-
-file = bot.client.upload_file(
-    bot_id=...,
-    chat_id=...,
-    file_path=Path("document.pdf"),
-)
-
-# Скачать файл
-content = bot.client.download_file(
-    bot_id=...,
-    file_id=...,
-)
-```
-
-Полный список методов Client API см. в `pybotx/client/client.py`.
-
-## Использование Client отдельно
-
-Client можно использовать вне Bot для интеграций:
-
-```python
-from pybotx.client.client import Client
-from pybotx.bot.bot_accounts_storage import BotAccountsStorage
-from pybotx.bot.callbacks.callback_manager import CallbackManager
-from pybotx.bot.callbacks.callback_memory_repo import CallbackMemoryRepo
-import urllib3
-
-# Создать зависимости
-storage = BotAccountsStorage([bot_account])
-pool = urllib3.PoolManager()
-callbacks_manager = CallbackManager(CallbackMemoryRepo())
-
-# Создать Client
-client = Client(
-    bot_accounts_storage=storage,
-    http_client=pool,
-    callbacks_manager=callbacks_manager,
-)
-
-# Использовать
+# Сообщения
 client.send_message(bot_id=..., chat_id=..., body="текст")
+client.send_message_sync(bot_id=..., chat_id=..., body="текст")  # BotX >= 3.58, без callback
+client.edit_message(bot_id=..., sync_id=..., body="новый текст")
+client.reply_message(bot_id=..., sync_id=..., body="ответ")
+
+# Чаты
+client.create_chat(bot_id=..., name="Новый чат", members=[...])
+client.chat_info(bot_id=..., chat_id=...)
+client.add_users_to_chat(bot_id=..., chat_id=..., huids=[...])
+
+# Пользователи
+client.search_user_by_email(bot_id=..., email="user@example.com")
+client.search_user_by_huid(bot_id=..., huid=...)
+
+# Файлы
+client.upload_file(bot_id=..., chat_id=..., file_path=Path("document.pdf"))
+client.download_file(bot_id=..., file_id=...)
 ```
 
-## Миграция с предыдущей версии
+## Обработка ошибок
 
-### API методы перенесены в Client
+Все ошибки клиента наследуются от `BaseClientError` (`pybotx.client.exceptions`). Отдельно стоит `BotXNetworkError` — сетевые ошибки/таймауты транспорта (`urllib3.exceptions.HTTPError`), обёрнутые в единую иерархию, и `InvalidBotXStatusCodeError`/`InvalidBotXResponsePayloadError` — невалидный статус-код или тело ответа BotX.
 
-**Было:**
-```python
-bot.send_message(bot_id=..., chat_id=..., body="текст")
-bot.create_chat(bot_id=..., name="чат")
-```
+## Миграция с версии на `Bot`/`HandlerCollector`/httpx
 
-**Стало:**
-```python
-bot.client.send_message(bot_id=..., chat_id=..., body="текст")
-bot.client.create_chat(bot_id=..., name="чат")
-```
+Более старая версия библиотеки предоставляла асинхронный `Bot` с встроенным HTTP-клиентом на `httpx`, диспетчеризацией через `HandlerCollector`/`CommandHandler` и жизненным циклом `bot.startup()`/`bot.shutdown()`. Начиная с этой версии:
 
-### Handlers вместо прямой диспетчеризации
-
-**Было:**
-```python
-# Ручная маршрутизация в контроллере
-if command == "/echo":
-    result = echo_uc.execute(message.argument)
-    bot.send_message(...)
-```
-
-**Стало:**
-```python
-# Автоматическая диспетчеризация через handlers
-bot = Bot(
-    handlers={
-        "/echo": CommandHandler(echo_uc),
-    },
-)
-
-# В resources
-bot.dispatch_command(bot_command)
-```
+- библиотека синхронная, транспорт — `urllib3.PoolManager`, который приложение создаёт и владеет сам;
+- `Bot` заменён на пару `Client` (исходящие запросы) + `create_botx_app` (входящие Falcon-эндпоинты) — они делят один `BotAccountsStorage`, но не связаны друг с другом напрямую;
+- `HandlerCollector`/`CommandHandler` заменены на явные словари `commands`/`events`, передаваемые в `create_botx_app`, и тонкие обёртки `Command`/`Callback` над юзкейсами приложения;
+- `bot.startup()`/`bot.shutdown()` больше не нужны — токен для `BotXAuthVersion.V1` запрашивается лениво при первом исходящем запросе, а `http_client` закрывается приложением (`http_client.clear()`) при выходе.
 
 ## Лицензия
 

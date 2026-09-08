@@ -56,7 +56,7 @@ class BotXAPIAddStickerResponsePayload(VerifiedPayloadBaseModel):
         )
 
 
-def bad_request_error_handler(response: urllib3.HTTPResponse) -> NoReturn:
+def bad_request_error_handler(response: urllib3.BaseHTTPResponse) -> NoReturn:
     data = json.loads(response.data)
     reason = data.get("reason")
 

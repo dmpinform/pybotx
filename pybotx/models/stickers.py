@@ -4,6 +4,7 @@ from uuid import UUID
 import urllib3
 
 from pybotx.buffer import BufferWritable
+from pybotx.client.exceptions.http import InvalidBotXStatusCodeError
 
 
 @dataclass(slots=True)
@@ -30,9 +31,10 @@ class Sticker:
     ) -> None:
         client = http_client or urllib3.PoolManager()
         response = client.request("GET", self.image_link, preload_content=True)
+        setattr(response, "_method", "GET")  # noqa: B010
 
         if not (200 <= response.status < 300):
-            raise urllib3.exceptions.HTTPError(f"HTTP {response.status}")
+            raise InvalidBotXStatusCodeError(response)
 
         buffer.write(response.data)
         buffer.seek(0)

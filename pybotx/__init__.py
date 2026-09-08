@@ -15,6 +15,7 @@ from pybotx.bot.api.responses.unverified_request import (
     build_unverified_request_response,
 )
 from pybotx.bot.app_factory import create_botx_app
+from pybotx.bot.callback import Callback
 from pybotx.bot.command import Command
 from pybotx.bot.exceptions import (
     BotShuttingDownError,
@@ -54,6 +55,7 @@ from pybotx.client.exceptions.common import (
 from pybotx.client.exceptions.event import EventNotFoundError
 from pybotx.client.exceptions.files import FileDeletedError, FileMetadataNotFound
 from pybotx.client.exceptions.http import (
+    BotXNetworkError,
     InvalidBotXResponsePayloadError,
     InvalidBotXStatusCodeError,
 )
@@ -178,6 +180,7 @@ __all__ = (
     "AttachmentVideo",
     "AttachmentVoice",
     "BaseResource",
+    "Callback",
     "CallbackResource",
     "Client",
     "Command",
@@ -196,6 +199,7 @@ __all__ = (
     "BotXAuthVersion",
     "BotIsNotChatMemberError",
     "BotMenu",
+    "BotXNetworkError",
     "BotSender",
     "BotShuttingDownError",
     "BotXMethodCallbackNotFoundError",
@@ -272,6 +276,7 @@ __all__ = (
     "ReplyMessage",
     "RequestHeadersNotProvidedError",
     "SmartApp",
+    "SmartAppEvent",
     "SmartappManifest",
     "SmartappManifestAndroidParams",
     "SmartappManifestAuroraParams",

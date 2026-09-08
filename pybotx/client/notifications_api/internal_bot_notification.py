@@ -2,15 +2,8 @@ from typing import Any, Literal
 from uuid import UUID
 
 from pybotx.client.authorized_botx_method import AuthorizedBotXMethod
-from pybotx.client.botx_method import (
-    callback_exception_thrower,
-    response_exception_thrower,
-)
-from pybotx.client.exceptions.common import ChatNotFoundError, RateLimitReachedError
-from pybotx.client.exceptions.notifications import (
-    BotIsNotChatMemberError,
-    FinalRecipientsListEmptyError,
-)
+from pybotx.client.botx_method import response_exception_thrower
+from pybotx.client.exceptions.common import RateLimitReachedError
 from pybotx.missing import Missing, MissingOptional
 from pybotx.models.api_base import UnverifiedPayloadBaseModel, VerifiedPayloadBaseModel
 
@@ -55,17 +48,6 @@ class InternalBotNotificationMethod(AuthorizedBotXMethod):
         429: response_exception_thrower(RateLimitReachedError),
     }
 
-    error_callback_handlers = {
-        **AuthorizedBotXMethod.error_callback_handlers,
-        "chat_not_found": callback_exception_thrower(ChatNotFoundError),
-        "bot_is_not_a_chat_member": callback_exception_thrower(
-            BotIsNotChatMemberError,
-        ),
-        "event_recipients_list_is_empty": callback_exception_thrower(
-            FinalRecipientsListEmptyError,
-        ),
-    }
-
     def execute(
         self,
         payload: BotXAPIInternalBotNotificationRequestPayload,
@@ -80,4 +62,5 @@ class InternalBotNotificationMethod(AuthorizedBotXMethod):
         api_model = self._verify_and_extract_api_model(
             BotXAPIInternalBotNotificationResponsePayload,
             response,
-        )return api_model
+        )
+        return api_model

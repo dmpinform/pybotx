@@ -16,7 +16,7 @@ def get_token(
 ) -> str:
     """Request token for bot.
 
-    Moved to separate file because used in `AuthorizedBotXMethod` and `Bot.get_token`.
+    Moved to separate file because used in `AuthorizedBotXMethod`.
     """
 
     method = GetTokenMethod(

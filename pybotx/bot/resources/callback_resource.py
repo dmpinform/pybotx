@@ -28,7 +28,7 @@ class CallbackResource(BaseResource):
         """Initialize callback resource.
 
         :param bot_accounts_storage: BotAccountsStorage instance.
-        :param callback_handler: Optional handler function to process callbacks.
+        :param callback: Callback handler to process incoming callbacks.
         :param verify_requests: Enable JWT verification.
         """
         super().__init__(bot_accounts_storage, verify_requests)
@@ -43,11 +43,11 @@ class CallbackResource(BaseResource):
         try:
             callback_msg = self._parse_callback(
                 req.media,
-                dict(req.headers),
+                {key.lower(): value for key, value in req.headers.items()},
             )
-        except UnverifiedRequestError:
+        except UnverifiedRequestError as exc:
             resp.status = falcon.HTTP_401
-            resp.media = build_unverified_request_response()
+            resp.media = build_unverified_request_response(str(exc))
             return
 
         # Вызвать обработчик колбэка
@@ -76,6 +76,8 @@ class CallbackResource(BaseResource):
         self._verify_request(headers)
 
         # Parse callback
-        callback = TypeAdapter(BotXMethodCallback).validate_python(raw_callback)
+        callback: BotXMethodCallback = TypeAdapter(BotXMethodCallback).validate_python(
+            raw_callback,
+        )
 
         return callback

@@ -1,10 +1,18 @@
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
 import pytest
 
 from pybotx import UserFromSearch, UserKinds
-from tests.client.users_api.convert_to_datetime import convert_to_datetime
+
+
+def convert_to_datetime(str_datetime: str) -> datetime:
+    datetime_instance = datetime.strptime(
+        str_datetime,
+        "%Y-%m-%dT%H:%M:%S.%fZ",
+    )
+    return datetime_instance.replace(tzinfo=timezone.utc)
 
 
 @pytest.fixture()

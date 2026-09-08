@@ -12,7 +12,7 @@ class BaseClientError(Exception):
     @classmethod
     def from_response(
         cls,
-        response: urllib3.HTTPResponse,
+        response: urllib3.BaseHTTPResponse,
         comment: str | None = None,
     ) -> "BaseClientError":
         # urllib3.HTTPResponse не хранит request, используем доступные атрибуты

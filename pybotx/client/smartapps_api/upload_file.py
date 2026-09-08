@@ -45,7 +45,7 @@ class UploadFileMethod(AuthorizedBotXMethod):
             response = self._botx_method_call(
                 "POST",
                 self._build_url(path),
-                files={"content": (filename, tmp_file)},
+                fields={"content": (filename, tmp_file.read())},
             )
 
         return self._verify_and_extract_api_model(

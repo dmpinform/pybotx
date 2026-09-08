@@ -27,7 +27,7 @@ class BotShuttingDownError(Exception):
 
 class AnswerDestinationLookupError(Exception):
     def __init__(self) -> None:
-        self.message = "No IncomingMessage received. Use `Bot.send` instead"
+        self.message = "No IncomingMessage received. Use `Client.send_message` instead"
         super().__init__(self.message)
 
 

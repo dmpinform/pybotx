@@ -47,10 +47,6 @@ class BotXAPISmartAppCustomNotificationResponsePayload(VerifiedPayloadBaseModel)
 
 
 class SmartAppCustomNotificationMethod(AuthorizedBotXMethod):
-    error_callback_handlers = {
-        **AuthorizedBotXMethod.error_callback_handlers,
-    }
-
     def execute(
         self,
         payload: BotXAPISmartAppCustomNotificationRequestPayload,
@@ -66,4 +62,5 @@ class SmartAppCustomNotificationMethod(AuthorizedBotXMethod):
         api_model = self._verify_and_extract_api_model(
             BotXAPISmartAppCustomNotificationResponsePayload,
             response,
-        )return api_model
+        )
+        return api_model

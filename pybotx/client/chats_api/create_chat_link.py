@@ -82,7 +82,7 @@ class BotXAPICreateChatLinkResponsePayload(VerifiedPayloadBaseModel):
         return self.result.to_domain()
 
 
-def server_error_handler(response: urllib3.HTTPResponse) -> NoReturn:
+def server_error_handler(response: urllib3.BaseHTTPResponse) -> NoReturn:
     reason = json.loads(response.data).get("reason")
 
     if reason == "error_from_messaging_service":

@@ -10,6 +10,7 @@ from pybotx.client.botx_method import response_exception_thrower
 from pybotx.client.exceptions.common import ChatNotFoundError
 from pybotx.client.exceptions.files import FileDeletedError, FileMetadataNotFound
 from pybotx.client.exceptions.http import InvalidBotXStatusCodeError
+from pybotx.constants import CHUNK_SIZE
 from pybotx.models.api_base import UnverifiedPayloadBaseModel
 
 
@@ -32,7 +33,7 @@ class BotXAPIDownloadFileRequestPayload(UnverifiedPayloadBaseModel):
         )
 
 
-def not_found_error_handler(response: urllib3.HTTPResponse) -> NoReturn:
+def not_found_error_handler(response: urllib3.BaseHTTPResponse) -> NoReturn:
     reason = json.loads(response.data).get("reason")
 
     if reason == "file_metadata_not_found":
@@ -63,7 +64,7 @@ class DownloadFileMethod(AuthorizedBotXMethod):
             params=payload.jsonable_dict(),
         ) as response:
             # https://github.com/nedbat/coveragepy/issues/1223
-            for chunk in response.iter_bytes():  # pragma: no branch
+            for chunk in response.stream(amt=CHUNK_SIZE):  # pragma: no branch
                 buffer.write(chunk)
 
         buffer.seek(0)

@@ -2,8 +2,9 @@
 
 from typing import Any
 
-from pybotx import Client, IncomingMessage
 from pybotx.bot.command import Command
+from pybotx.client.client import Client
+from pybotx.models.commands import BotCommand
 
 
 class SendMailCommand(Command):
@@ -13,11 +14,10 @@ class SendMailCommand(Command):
         super().__init__(usecase)
         self._client = client
 
-    def execute(self, message: IncomingMessage) -> None:
+    def execute(self, message: BotCommand) -> None:
         """Execute send_mail command.
 
         :param message: Incoming message from BotX.
-        :param client: Client instance for sending responses.
         """
 
         # Выполнить usecase

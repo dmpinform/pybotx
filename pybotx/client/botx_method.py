@@ -16,26 +16,17 @@ from pydantic import ValidationError
 
 from pybotx.bot.bot_accounts_storage import BotAccountsStorage
 from pybotx.client.exceptions.base import BaseClientError
-from pybotx.client.exceptions.callbacks import BotXMethodFailedCallbackReceivedError
 from pybotx.client.exceptions.http import (
+    BotXNetworkError,
     InvalidBotXResponsePayloadError,
     InvalidBotXStatusCodeError,
 )
 from pybotx.logger import logger, pformat_jsonable_obj, trim_file_data_in_outgoing_json
 from pybotx.models.api_base import VerifiedPayloadBaseModel
-from pybotx.models.method_callbacks import (
-    BotAPIMethodFailedCallback,
-    BotXMethodCallback,
-)
 
-StatusHandler = Callable[[Arg(urllib3.HTTPResponse, "response")], NoReturn]
+StatusHandler = Callable[[Arg(urllib3.BaseHTTPResponse, "response")], NoReturn]
 StatusHandlers = Mapping[int, StatusHandler]
 
-CallbackExceptionHandler = Callable[
-    [Arg(BotAPIMethodFailedCallback, "callback")],
-    NoReturn,
-]
-ErrorCallbackHandlers = Mapping[str, CallbackExceptionHandler]
 TBotXAPIModel = TypeVar("TBotXAPIModel", bound=VerifiedPayloadBaseModel)
 
 
@@ -43,25 +34,14 @@ def response_exception_thrower(
     exc: type[BaseClientError],
     comment: str | None = None,
 ) -> StatusHandler:
-    def factory(response: urllib3.HTTPResponse) -> NoReturn:
+    def factory(response: urllib3.BaseHTTPResponse) -> NoReturn:
         raise exc.from_response(response, comment)
-
-    return factory
-
-
-def callback_exception_thrower(
-    exc: type[BaseClientError],
-    comment: str | None = None,
-) -> CallbackExceptionHandler:
-    def factory(callback: BotAPIMethodFailedCallback) -> NoReturn:
-        raise exc.from_callback(callback, comment)
 
     return factory
 
 
 class BotXMethod:
     status_handlers: StatusHandlers = {}
-    error_callback_handlers: ErrorCallbackHandlers = {}
 
     def __init__(
         self,
@@ -86,7 +66,7 @@ class BotXMethod:
     def _verify_and_extract_api_model(
         self,
         model_cls: type[TBotXAPIModel],
-        response: urllib3.HTTPResponse,
+        response: urllib3.BaseHTTPResponse,
     ) -> TBotXAPIModel:
         try:
             raw_model = json.loads(response.data)
@@ -105,31 +85,50 @@ class BotXMethod:
 
         return api_model
 
-    def _botx_method_call(self, *args: Any, **kwargs: Any) -> urllib3.HTTPResponse:
+    def _botx_method_call(
+        self,
+        *args: Any,
+        **kwargs: Any,
+    ) -> urllib3.BaseHTTPResponse:
         self._log_outgoing_request(*args, **kwargs)
 
         method, url = args
         headers = kwargs.get("headers", {})
         json_data = kwargs.get("json")
         params = kwargs.get("params")
+        fields = kwargs.get("fields")
 
         # Добавить query params к URL
         if params:
             url = f"{url}?{urlencode(params)}"
 
-        # Подготовить body и headers для JSON
-        body = None
-        if json_data is not None:
-            body = json.dumps(json_data)
-            headers = {**headers, "Content-Type": "application/json"}
+        try:
+            if fields is not None:
+                response = self._http_client.request(
+                    method,
+                    url,
+                    fields=fields,
+                    headers=headers,
+                    preload_content=True,  # Загружать content сразу
+                )
+            else:
+                # Подготовить body и headers для JSON
+                body = None
+                if json_data is not None:
+                    body = json.dumps(json_data)
+                    headers = {**headers, "Content-Type": "application/json"}
 
-        response = self._http_client.request(
-            method,
-            url,
-            body=body,
-            headers=headers,
-            preload_content=True,  # Загружать content сразу
-        )
+                response = self._http_client.request(
+                    method,
+                    url,
+                    body=body,
+                    headers=headers,
+                    preload_content=True,  # Загружать content сразу
+                )
+        except urllib3.exceptions.HTTPError as network_exc:
+            raise BotXNetworkError(method, url, network_exc) from network_exc
+
+        setattr(response, "_method", method)  # noqa: B010
 
         self._raise_for_status(response)
         return response
@@ -139,7 +138,7 @@ class BotXMethod:
         self,
         *args: Any,
         **kwargs: Any,
-    ) -> Iterator[urllib3.HTTPResponse]:
+    ) -> Iterator[urllib3.BaseHTTPResponse]:
         self._log_outgoing_request(*args, **kwargs)
 
         method, url = args
@@ -155,13 +154,18 @@ class BotXMethod:
             body = json.dumps(json_data)
             headers = {**headers, "Content-Type": "application/json"}
 
-        response = self._http_client.request(
-            method,
-            url,
-            body=body,
-            headers=headers,
-            preload_content=False,  # Streaming mode
-        )
+        try:
+            response = self._http_client.request(
+                method,
+                url,
+                body=body,
+                headers=headers,
+                preload_content=False,  # Streaming mode
+            )
+        except urllib3.exceptions.HTTPError as network_exc:
+            raise BotXNetworkError(method, url, network_exc) from network_exc
+
+        setattr(response, "_method", method)  # noqa: B010
 
         try:
             self._raise_for_status(response)
@@ -169,7 +173,7 @@ class BotXMethod:
         finally:
             response.release_conn()
 
-    def _raise_for_status(self, response: urllib3.HTTPResponse) -> None:
+    def _raise_for_status(self, response: urllib3.BaseHTTPResponse) -> None:
         handler = self.status_handlers.get(response.status)
         if handler:
             handler(response)  # Handler should raise an exception

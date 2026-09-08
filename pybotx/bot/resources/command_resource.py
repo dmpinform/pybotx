@@ -32,19 +32,21 @@ class CommandResource(BaseResource):
         self,
         bot_accounts_storage: BotAccountsStorage,
         commands: dict[str, "Command"],
+        events: "dict[type, Command] | None" = None,
         verify_requests: bool = True,
         logging_commands: bool = True,
     ) -> None:
         """Initialize command resource.
 
         :param bot_accounts_storage: BotAccountsStorage instance.
-        :param dispatcher: CommandDispatcher for routing commands.
-        :param client: Client instance for API calls.
+        :param commands: Dict mapping command strings to Command handlers.
+        :param events: Dict mapping system event types to Command handlers.
         :param verify_requests: Enable JWT verification.
         :param logging_commands: Enable command logging.
         """
         super().__init__(bot_accounts_storage, verify_requests)
         self._commands = commands
+        self._events = events or {}
         self._logging_commands = logging_commands
 
     def on_post(self, req: falcon.Request, resp: falcon.Response) -> None:
@@ -56,19 +58,21 @@ class CommandResource(BaseResource):
         try:
             bot_command = self._parse_command(
                 req.media,
-                dict(req.headers),
+                {key.lower(): value for key, value in req.headers.items()},
             )
-        except UnverifiedRequestError:
+        except UnverifiedRequestError as exc:
             resp.status = falcon.HTTP_401
-            resp.media = build_unverified_request_response()
+            resp.media = build_unverified_request_response(str(exc))
             return
-
-        # Dispatch только IncomingMessage (user messages)
 
         if isinstance(bot_command, IncomingMessage):
             command = self._dispatch(bot_command)
             if command:
                 command.execute(bot_command)
+        else:
+            event_handler = self._events.get(type(bot_command))
+            if event_handler:
+                event_handler.execute(bot_command)
 
         resp.media = build_command_accepted_response()
 
@@ -114,13 +118,10 @@ class CommandResource(BaseResource):
 
         return bot_command
 
-    """Dispatcher for routing bot commands to command use_case."""
-
-    def _dispatch(self, message: IncomingMessage) -> Command | None:
+    def _dispatch(self, message: IncomingMessage) -> "Command | None":
         """Dispatch message to appropriate handler.
 
         :param message: IncomingMessage from BotX.
-        :param client: Client instance for API calls.
         """
         # Извлечь команду из тела сообщения (например, "/echo")
         command_bot = message.body.split()[0] if message.body else ""

@@ -4,7 +4,6 @@ from uuid import UUID
 import urllib3
 
 from pybotx.client.authorized_botx_method import AuthorizedBotXMethod
-from pybotx.client.botx_method import callback_exception_thrower
 from pybotx.client.exceptions.common import ChatNotFoundError
 from pybotx.client.exceptions.http import InvalidBotXResponsePayloadError
 from pybotx.client.exceptions.notifications import (
@@ -146,7 +145,7 @@ _DIRECT_NOTIFICATION_SYNC_ERROR_MAP = {
 
 
 def _raise_direct_notification_sync_error(
-    response: "urllib3.HTTPResponse",
+    response: "urllib3.BaseHTTPResponse",
     reason: str | None,
 ) -> None:
     exc_type = _DIRECT_NOTIFICATION_SYNC_ERROR_MAP.get(reason or "")
@@ -157,18 +156,6 @@ def _raise_direct_notification_sync_error(
 
 
 class DirectNotificationMethod(AuthorizedBotXMethod):
-    error_callback_handlers = {
-        **AuthorizedBotXMethod.error_callback_handlers,
-        "chat_not_found": callback_exception_thrower(ChatNotFoundError),
-        "bot_is_not_a_chat_member": callback_exception_thrower(
-            BotIsNotChatMemberError,
-        ),
-        "event_recipients_list_is_empty": callback_exception_thrower(
-            FinalRecipientsListEmptyError,
-        ),
-        "stealth_mode_disabled": callback_exception_thrower(StealthModeDisabledError),
-    }
-
     def execute(
         self,
         payload: BotXAPIDirectNotificationRequestPayload,

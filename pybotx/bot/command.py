@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from pybotx.models.message.incoming_message import IncomingMessage
+from pybotx.models.commands import BotCommand
 
 
 class Command:
@@ -15,11 +15,9 @@ class Command:
         """
         self._usecase = usecase
 
-    def execute(self, message: IncomingMessage) -> None:
+    def execute(self, message: BotCommand) -> None:
         """Execute command by running UseCase.
 
-        :param message: Incoming message from BotX.
-        :param client: Client instance for sending responses.
+        :param message: Incoming message or system event from BotX.
         """
-        # Выполнить usecase
         self._usecase.execute(message)

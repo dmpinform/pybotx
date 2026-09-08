@@ -70,8 +70,7 @@ class UploadFileMethod(AuthorizedBotXMethod):
             response = self._botx_method_call(
                 "POST",
                 self._build_url(path),
-                data=payload.jsonable_dict(),
-                files={"content": (filename, tmp_file)},
+                fields={**payload.jsonable_dict(), "content": (filename, tmp_file.read())},
             )
 
         return self._verify_and_extract_api_model(

@@ -1,22 +1,13 @@
-import logging
 import socket
-from collections.abc import Callable, Generator
-
+from collections.abc import Callable
 from datetime import datetime
-from http import HTTPStatus
-from tempfile import NamedTemporaryFile
-from typing import IO, Any
-from unittest.mock import Mock
+from typing import Any
 from uuid import UUID, uuid4
 
-import httpx
 import jwt
 import pytest
-from pydantic import BaseModel
-from respx.router import MockRouter
 
 from pybotx import (
-    Bot,
     BotAccount,
     BotAccountWithSecret,
     BotXAuthVersion,
@@ -72,17 +63,6 @@ def prepared_bot_accounts_storage(
 
 
 @pytest.fixture
-def datetime_formatter() -> Callable[[str], datetime]:
-    class DateTimeFormatter(BaseModel):
-        value: datetime
-
-    def factory(dt_str: str) -> datetime:
-        return DateTimeFormatter(value=dt_str).value
-
-    return factory
-
-
-@pytest.fixture
 def host() -> str:
     return "cts.example.com"
 
@@ -95,11 +75,6 @@ def cts_url() -> str:
 @pytest.fixture
 def bot_id() -> UUID:
     return UUID("24348246-6791-4ac0-9d86-b948cd6a0e46")
-
-
-@pytest.fixture
-def call_id() -> UUID:
-    return uuid4()
 
 
 @pytest.fixture
@@ -163,68 +138,6 @@ def authorization_header_v1(
 @pytest.fixture
 def bot_signature() -> str:
     return "5393FDE463800BB05C4271111AF68D54A4B5EC03EBE808BC2B1FCB4F91BE2DCF"
-
-
-@pytest.fixture
-def mock_authorization(
-    respx_mock: MockRouter,
-    monkeypatch: pytest.MonkeyPatch,
-    host: str,
-    bot_id: UUID,
-    bot_signature: str,
-) -> None:
-    """Fixture should be used as a marker."""
-    monkeypatch.setattr(
-        BotAccountsStorage,
-        "build_jwt_v2",
-        lambda _self, _bot_id: "token",
-    )
-    respx_mock.get(
-        f"https://{host}/api/v2/botx/bots/{bot_id}/token",
-        params={"signature": bot_signature},
-    ).mock(
-        return_value=httpx.Response(
-            HTTPStatus.OK,
-            json={
-                "status": "ok",
-                "result": "token",
-            },
-        ),
-    )
-
-
-@pytest.hookimpl(trylast=True)
-def pytest_collection_modifyitems(items: list[pytest.Function]) -> None:
-    for item in items:
-        if item.get_closest_marker("mock_authorization"):
-            item.fixturenames.append("mock_authorization")
-
-
-@pytest.fixture()
-def loguru_caplog(
-    caplog: pytest.LogCaptureFixture,
-) -> Generator[pytest.LogCaptureFixture, None, None]:
-    # https://github.com/Delgan/loguru/issues/59
-
-    class PropogateHandler(logging.Handler):
-        def emit(self, record: logging.LogRecord) -> None:
-            logging.getLogger(record.name).handle(record)
-
-    handler_id = logger.add(PropogateHandler(), format="{message}")
-    yield caplog
-    logger.remove(handler_id)
-
-
-@pytest.fixture
-def httpx_client() -> Generator[httpx.Client, None, None]:
-    with httpx.Client() as client:
-        yield client
-
-
-@pytest.fixture
-def buffer() -> Generator[IO[bytes], None, None]:
-    with NamedTemporaryFile("wb+") as buffer:
-        yield buffer
 
 
 @pytest.fixture
@@ -380,21 +293,6 @@ def incoming_message_factory(
         )
 
     return decorator
-
-
-@pytest.fixture
-def correct_handler_trigger() -> Mock:
-    return Mock()
-
-
-@pytest.fixture
-def incorrect_handler_trigger() -> Mock:
-    return Mock()
-
-
-@pytest.fixture(autouse=True)
-def prevent_http_requests(respx_mock: MockRouter) -> None:
-    pass
 
 
 @pytest.fixture

@@ -12,8 +12,7 @@ from example.app.usecases.notify import Notify
 from example.app.usecases.send_mail import SendMail
 from example.interfaces.bot import custom_command
 from example.interfaces.bot.receivers import Receivers
-from pybotx import Client, Command, create_botx_app
-from pybotx.bot.callback import Callback
+from pybotx import Callback, Client, Command, create_botx_app
 from pybotx.constants import BOTX_DEFAULT_TIMEOUT
 
 # Константы
@@ -37,7 +36,7 @@ client = Client(
 
 # Usecases
 hub = Hub()
-echo = EchoUseCase()
+echo = EchoUseCase(client)
 notify = Notify(hub)
 send_mail = SendMail()
 handle_callback = HandleCallback()
@@ -46,7 +45,6 @@ receivers = Receivers(hub=hub, client=client)
 # Command handlers
 commands = {
     "/echo": Command(echo),
-    "/notify": Command(notify),
     "/send_mail": custom_command.SendMailCommand(send_mail, client),
 }
 # Callback handlers
@@ -54,9 +52,7 @@ callback = Callback(handle_callback)
 
 # Создать app через фабрику
 application = create_botx_app(
-    bot_id=BOT_ID,
-    cts_url=CTS_URL,
-    secret_key=SECRET_KEY,
+    client=client,
     commands=commands,
     callback=callback,
 )

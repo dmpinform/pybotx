@@ -1,7 +1,6 @@
 """BotX API Client для отправки запросов."""
 
 import csv
-import uuid
 from collections.abc import Iterable, Iterator
 from contextlib import ExitStack, contextmanager
 from datetime import datetime
@@ -88,6 +87,7 @@ from pybotx.client.events_api.typing_event import (
     BotXAPITypingEventRequestPayload,
     TypingEventMethod,
 )
+from pybotx.client.exceptions.common import ChatNotFoundError
 from pybotx.client.files_api.download_file import (
     BotXAPIDownloadFileRequestPayload,
     DownloadFileMethod,
@@ -215,7 +215,7 @@ from pybotx.client.voex_api.get_conference import (
     BotXAPIGetConferenceRequestPayload,
     GetConferenceMethod,
 )
-from pybotx.constants import BOTX_DEFAULT_TIMEOUT, STICKER_PACKS_PER_PAGE
+from pybotx.constants import STICKER_PACKS_PER_PAGE
 from pybotx.image_validators import (
     ensure_file_content_is_png,
     ensure_sticker_image_size_valid,
@@ -252,7 +252,7 @@ class Client:
         cts_url: str,
         secret_key: str,
         http_client: urllib3.PoolManager,
-        auth_version: str = BotXAuthVersion.V2,
+        auth_version: BotXAuthVersion = BotXAuthVersion.V2,
     ) -> None:
         """Initialize Client.
 
@@ -270,6 +270,11 @@ class Client:
             auth_version=auth_version,
         )
         self._http_client = http_client
+
+    @property
+    def bot_accounts_storage(self) -> BotAccountsStorage:
+        """Storage shared with `create_botx_app` to avoid duplicate auth caches."""
+        return self._bot_accounts_storage
 
     def get_bots_list(
         self,

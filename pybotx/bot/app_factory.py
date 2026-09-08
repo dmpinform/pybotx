@@ -4,56 +4,44 @@ from typing import Any
 
 import falcon
 
-from pybotx import BotAccountWithSecret
-from pybotx.auth import BotXAuthVersion
-from pybotx.bot.bot_accounts_storage import BotAccountsStorage
 from pybotx.bot.resources.callback_resource import CallbackResource
 from pybotx.bot.resources.command_resource import CommandResource
 from pybotx.bot.resources.status_resource import StatusResource
+from pybotx.client.client import Client
 from pybotx.models.status import BotMenu
 
 
 def create_botx_app(
-    bot_id: UUID,
-    cts_url: str,
-    secret_key: str,
+    client: Client,
     commands: dict[str, Any],
     callback: Any,
-    auth_version: str = BotXAuthVersion.V2,
+    events: dict[type, Any] | None = None,
     bot_menu: BotMenu | None = None,
     verify_requests: bool = True,
-) -> falcon.App:
+) -> falcon.App[falcon.Request, falcon.Response]:
     """Create Falcon WSGI app with BotX resources.
 
-    :param credentials: BotAccountsStorage instance.
-    :param client: Client instance for API calls.
-    :param command_handlers: Dict mapping command strings to Command handlers.
-                            Example: {"/echo": Command(EchoUseCase())}
+    :param client: Client instance; its BotAccountsStorage is reused for
+                    request verification, so auth tokens are cached once.
+    :param commands: Dict mapping command strings to Command handlers.
+                      Example: {"/echo": Command(EchoUseCase(client))}
+    :param callback: Callback handler for incoming async results.
+    :param events: Dict mapping system event types to Command handlers.
     :param bot_menu: Bot menu for /status endpoint (optional).
-    :param callback_handler: Optional handler function for incoming callbacks.
     :param verify_requests: Enable JWT verification.
 
     :return: Configured Falcon app.
     """
-    credentials = BotAccountsStorage(
-        [
-            BotAccountWithSecret(
-                id=bot_id,
-                cts_url=cts_url,
-                secret_key=secret_key,
-            )
-        ],
-        auth_version=auth_version,
-    )
+    credentials = client.bot_accounts_storage
 
     app = falcon.App()
 
-    # Add routes
     app.add_route(
         "/command",
         CommandResource(
             credentials,
             commands,
+            events,
             verify_requests,
         ),
     )

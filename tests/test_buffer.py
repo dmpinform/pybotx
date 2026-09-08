@@ -1,7 +1,5 @@
 import os
 
-import pytest
-
 from pybotx.buffer import (
     BufferReadable,
     BufferWritable,
