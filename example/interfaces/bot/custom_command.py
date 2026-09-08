@@ -1,26 +1,30 @@
 """Кастомные обработчики команд."""
 
-from pybotx import Client, Command, IncomingMessage
+from typing import Any
+
+from pybotx import Client, IncomingMessage
+from pybotx.bot.command import Command
 
 
-class SendMailHandler(Command):
+class SendMailCommand(Command):
     """Кастомный обработчик для отправки email."""
 
-    def execute(self, message: IncomingMessage, client: Client) -> None:
+    def __init__(self, usecase: Any, client: Client):
+        super().__init__(usecase)
+        self._client = client
+
+    def execute(self, message: IncomingMessage) -> None:
         """Execute send_mail command.
 
         :param message: Incoming message from BotX.
         :param client: Client instance for sending responses.
         """
-        # Извлечь аргументы
-        args = self._parse_args(message.body)
-        email_text = args[0] if args else "Empty message"
 
         # Выполнить usecase
-        result = self._usecase.run(email_text)
+        result = self._usecase.run(message)
 
         # Отправить подтверждение в чат
-        client.send_message(
+        self._client.send_message(
             bot_id=message.bot.id,
             chat_id=message.chat.id,
             body=f"Email sent: {result}",

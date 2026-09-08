@@ -11,9 +11,8 @@ NOTIFY_CHAT_ID = UUID("00000000-0000-0000-0000-000000000001")
 
 
 class Receivers:
-
     def __init__(self, hub: Hub, client: Client):
-        self._hub=hub
+        self._hub = hub
         self._hub.add_reaction(Notification, self.send_notification_to_chat)
         self._client = client
 

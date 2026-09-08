@@ -1,6 +1,7 @@
 """BotX API Client для отправки запросов."""
 
 import csv
+import uuid
 from collections.abc import Iterable, Iterator
 from contextlib import ExitStack, contextmanager
 from datetime import datetime
@@ -10,6 +11,7 @@ from uuid import UUID
 
 import urllib3
 
+from pybotx.auth import BotXAuthVersion
 from pybotx.bot.bot_accounts_storage import BotAccountsStorage
 from pybotx.buffer import BufferReadable, BufferWritable
 from pybotx.client.bots_api.bot_catalog import (
@@ -220,6 +222,7 @@ from pybotx.image_validators import (
 )
 from pybotx.missing import Missing, MissingOptional, Undefined
 from pybotx.models.attachments import IncomingFileAttachment, OutgoingAttachment
+from pybotx.models.bot_account import BotAccountWithSecret
 from pybotx.models.bot_catalog import BotsListItem
 from pybotx.models.call import Call
 from pybotx.models.chats import ChatInfo, ChatLink, ChatListItem
@@ -245,15 +248,27 @@ class Client:
 
     def __init__(
         self,
-        bot_accounts_storage: BotAccountsStorage,
+        bot_id: UUID,
+        cts_url: str,
+        secret_key: str,
         http_client: urllib3.PoolManager,
+        auth_version: str = BotXAuthVersion.V2,
     ) -> None:
         """Initialize Client.
 
         :param bot_accounts_storage: Storage for bot accounts and auth.
         :param http_client: HTTP client (urllib3.PoolManager) for requests.
         """
-        self._bot_accounts_storage = bot_accounts_storage
+        self._bot_accounts_storage = BotAccountsStorage(
+            [
+                BotAccountWithSecret(
+                    id=bot_id,
+                    cts_url=cts_url,
+                    secret_key=secret_key,
+                )
+            ],
+            auth_version=auth_version,
+        )
         self._http_client = http_client
 
     def get_bots_list(

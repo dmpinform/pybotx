@@ -3,7 +3,6 @@
 from uuid import UUID
 
 from pybotx.bot.bot_accounts_storage import BotAccountsStorage
-from pybotx.bot.exceptions import UnknownBotAccountError
 from pybotx.bot.verification import verify_request
 from pybotx.models.bot_account import BotAccountWithSecret
 

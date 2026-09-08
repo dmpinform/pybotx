@@ -14,16 +14,8 @@ from pybotx.bot.api.responses.unverified_request import (
     BotAPIUnverifiedRequestResponse,
     build_unverified_request_response,
 )
-from pybotx.bot.command import Command
-from pybotx.bot.dispatcher import CommandDispatcher
-from pybotx.bot.resources import (
-    BaseResource,
-    CallbackResource,
-    CommandResource,
-    StatusResource,
-)
 from pybotx.bot.app_factory import create_botx_app
-from pybotx.client.client import Client
+from pybotx.bot.command import Command
 from pybotx.bot.exceptions import (
     BotShuttingDownError,
     BotXMethodCallbackNotFoundError,
@@ -31,6 +23,13 @@ from pybotx.bot.exceptions import (
     UnknownBotAccountError,
     UnverifiedRequestError,
 )
+from pybotx.bot.resources import (
+    BaseResource,
+    CallbackResource,
+    CommandResource,
+    StatusResource,
+)
+from pybotx.client.client import Client
 from pybotx.client.exceptions.callbacks import (
     BotXMethodFailedCallbackReceivedError,
     CallbackNotReceivedError,
@@ -182,7 +181,6 @@ __all__ = (
     "CallbackResource",
     "Client",
     "Command",
-    "CommandDispatcher",
     "CommandResource",
     "BotAPIBotDisabledErrorData",
     "BotAPIBotDisabledResponse",

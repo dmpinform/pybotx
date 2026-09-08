@@ -22,8 +22,7 @@ from pybotx.models.enums import BotAPICommandTypes
 from pybotx.models.message.incoming_message import IncomingMessage
 
 if TYPE_CHECKING:
-    from pybotx.bot.dispatcher import CommandDispatcher
-    from pybotx.client.client import Client
+    from pybotx.bot.command import Command
 
 
 class CommandResource(BaseResource):
@@ -32,8 +31,7 @@ class CommandResource(BaseResource):
     def __init__(
         self,
         bot_accounts_storage: BotAccountsStorage,
-        dispatcher: "CommandDispatcher",
-        client: "Client",
+        commands: dict[str, "Command"],
         verify_requests: bool = True,
         logging_commands: bool = True,
     ) -> None:
@@ -46,8 +44,7 @@ class CommandResource(BaseResource):
         :param logging_commands: Enable command logging.
         """
         super().__init__(bot_accounts_storage, verify_requests)
-        self._dispatcher = dispatcher
-        self._client = client
+        self._commands = commands
         self._logging_commands = logging_commands
 
     def on_post(self, req: falcon.Request, resp: falcon.Response) -> None:
@@ -67,8 +64,11 @@ class CommandResource(BaseResource):
             return
 
         # Dispatch только IncomingMessage (user messages)
+
         if isinstance(bot_command, IncomingMessage):
-            self._dispatcher.dispatch(bot_command, self._client)
+            command = self._dispatch(bot_command)
+            if command:
+                command.execute(bot_command)
 
         resp.media = build_command_accepted_response()
 
@@ -113,3 +113,19 @@ class CommandResource(BaseResource):
             )
 
         return bot_command
+
+    """Dispatcher for routing bot commands to command use_case."""
+
+    def _dispatch(self, message: IncomingMessage) -> Command | None:
+        """Dispatch message to appropriate handler.
+
+        :param message: IncomingMessage from BotX.
+        :param client: Client instance for API calls.
+        """
+        # Извлечь команду из тела сообщения (например, "/echo")
+        command_bot = message.body.split()[0] if message.body else ""
+
+        # Найти command для команды бота
+        command = self._commands.get(command_bot)
+
+        return command

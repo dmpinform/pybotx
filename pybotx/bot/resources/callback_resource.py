@@ -1,6 +1,5 @@
 """Callback resource for handling async results from BotX API."""
 
-from collections.abc import Callable
 from typing import Any
 
 import falcon
@@ -10,6 +9,7 @@ from pybotx.bot.api.responses.unverified_request import (
     build_unverified_request_response,
 )
 from pybotx.bot.bot_accounts_storage import BotAccountsStorage
+from pybotx.bot.callback import Callback
 from pybotx.bot.exceptions import UnverifiedRequestError
 from pybotx.bot.resources.base_resource import BaseResource
 from pybotx.logger import logger
@@ -22,7 +22,7 @@ class CallbackResource(BaseResource):
     def __init__(
         self,
         bot_accounts_storage: BotAccountsStorage,
-        callback_handler: Callable[[BotXMethodCallback], None] | None = None,
+        callback: Callback,
         verify_requests: bool = True,
     ) -> None:
         """Initialize callback resource.
@@ -32,7 +32,7 @@ class CallbackResource(BaseResource):
         :param verify_requests: Enable JWT verification.
         """
         super().__init__(bot_accounts_storage, verify_requests)
-        self._callback_handler = callback_handler
+        self._callback = callback
 
     def on_post(self, req: falcon.Request, resp: falcon.Response) -> None:
         """Handle POST /notification/callback request.
@@ -41,7 +41,7 @@ class CallbackResource(BaseResource):
         :param resp: Falcon response.
         """
         try:
-            callback = self._parse_callback(
+            callback_msg = self._parse_callback(
                 req.media,
                 dict(req.headers),
             )
@@ -50,9 +50,10 @@ class CallbackResource(BaseResource):
             resp.media = build_unverified_request_response()
             return
 
-        # Вызвать handler если он есть
-        if self._callback_handler:
-            self._callback_handler(callback)
+        # Вызвать обработчик колбэка
+        self._callback.execute(
+            callback_msg,
+        )
 
         resp.media = {"status": "ok"}
 

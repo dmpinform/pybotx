@@ -10,36 +10,16 @@ from example.app.usecases.echo import EchoUseCase
 from example.app.usecases.handle_callback import HandleCallback
 from example.app.usecases.notify import Notify
 from example.app.usecases.send_mail import SendMail
-from example.interfaces.bot import custom_handlers
+from example.interfaces.bot import custom_command
 from example.interfaces.bot.receivers import Receivers
-from pybotx import BotAccountWithSecret, Client, Command, create_botx_app
-from pybotx.auth import BotXAuthVersion
-from pybotx.bot.bot_accounts_storage import BotAccountsStorage
+from pybotx import Client, Command, create_botx_app
+from pybotx.bot.callback import Callback
 from pybotx.constants import BOTX_DEFAULT_TIMEOUT
-
-# Инициализация
-hub = Hub()
-echo = EchoUseCase()
-notify = Notify(hub)
-send_mail = SendMail()
-handle_callback = HandleCallback()
 
 # Константы
 BOT_ID = UUID("ffffffff-ffff-ffff-ffff-ffffffffffff")
 CTS_URL = "https://cts.example.com"
 SECRET_KEY = "secret"
-
-# Создать bot_accounts_storage
-bot_accounts_storage = BotAccountsStorage(
-    [
-        BotAccountWithSecret(
-            id=BOT_ID,
-            cts_url=CTS_URL,
-            secret_key=SECRET_KEY,
-        )
-    ],
-    auth_version=BotXAuthVersion.V2,
-)
 
 # Создать HTTP client
 http_client = urllib3.PoolManager(
@@ -49,26 +29,36 @@ http_client = urllib3.PoolManager(
 
 # Создать Client
 client = Client(
-    bot_accounts_storage=bot_accounts_storage,
+    bot_id=BOT_ID,
+    cts_url=CTS_URL,
+    secret_key=SECRET_KEY,
     http_client=http_client,
 )
 
+# Usecases
+hub = Hub()
+echo = EchoUseCase()
+notify = Notify(hub)
+send_mail = SendMail()
+handle_callback = HandleCallback()
+# Signals
+receivers = Receivers(hub=hub, client=client)
 # Command handlers
-command_handlers = {
+commands = {
     "/echo": Command(echo),
     "/notify": Command(notify),
-    "send_mail": custom_handlers.SendMailHandler(send_mail),
+    "/send_mail": custom_command.SendMailCommand(send_mail, client),
 }
-
-# Receivers получает client напрямую
-receivers = Receivers(hub=hub, client=client)
+# Callback handlers
+callback = Callback(handle_callback)
 
 # Создать app через фабрику
 application = create_botx_app(
-    credentials=bot_accounts_storage,
-    client=client,
-    command_handlers=command_handlers,
-    callback_handler=handle_callback.execute,  # Обработчик для callback
+    bot_id=BOT_ID,
+    cts_url=CTS_URL,
+    secret_key=SECRET_KEY,
+    commands=commands,
+    callback=callback,
 )
 
 

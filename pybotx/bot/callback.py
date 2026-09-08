@@ -1,12 +1,12 @@
-"""Базовый класс для обработчиков команд бота."""
+"""Базовый класс для обработчиков колбэков бота."""
 
 from typing import Any
 
-from pybotx.models.message.incoming_message import IncomingMessage
+from pybotx.models.method_callbacks import BotXMethodCallback
 
 
-class Command:
-    """Базовый обработчик команд."""
+class Callback:
+    """Базовый обработчик колбэков."""
 
     def __init__(self, usecase: Any) -> None:
         """Initialize handler with UseCase.
@@ -15,7 +15,7 @@ class Command:
         """
         self._usecase = usecase
 
-    def execute(self, message: IncomingMessage) -> None:
+    def execute(self, message: BotXMethodCallback) -> None:
         """Execute command by running UseCase.
 
         :param message: Incoming message from BotX.
